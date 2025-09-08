@@ -1,0 +1,26 @@
+{% extends "layout/base.html" %}
+
+{% block content %}
+  <main class="content">
+    {% match auth_state %}
+      {% when AuthState::Anonymous %}
+      <hr />
+      <p>Please log in to access your account.</p>
+      <footer>
+        <a hx-swap="transition:true" href="/login">Log In</a>
+      </footer>
+      {% when AuthState::LoginPage %}
+      <hr />
+      <p>Please log in to access your account.</p>
+      <footer>
+        <a hx-swap="transition:true" href="/login">Log In</a>
+      </footer>
+      {% when AuthState::Authenticated %}
+      {% include "content/bookmarks.html" %}
+    {% endmatch %}
+  </main>
+{% endblock content %}
+
+{% block sidebar %}
+  {% include "content/tags.html" %}
+{% endblock sidebar %}

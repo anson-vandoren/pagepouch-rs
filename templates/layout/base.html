@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>PagePouch | {{ title }}</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/assets/css/simple.css" />
+    <link rel="stylesheet" href="/assets/css/main.css" />
+    <link rel="shortcut icon" href="/assets/img/favicon.svg" />
+    <meta name="description" content="A bookmark-saving app" />
+    <script src="/assets/js/htmx.min.js"></script>
+    <script src="/assets/js/htmx-ext-response-targets.js"></script>
+  </head>
+  <body hx-ext="response-targets">
+    <header>
+      {% if !is_error %}{% include "partials/navbar.html" %}{% endif %}
+    </header>
+
+    {% block content %}{% endblock content %}
+    {% if auth_state == AuthState::Authenticated %}
+      {% block sidebar %}
+      {% endblock sidebar %}
+    {% endif %}
+    {% include "partials/messages.html" %}
+    {% include "partials/footer.html" %}
+  </body>
+  <script>
+    // Auto-reload on server restart
+    (function () {
+      // Only in dev
+      if (window.location.hostname === "localhost") {
+        const evtSource = new EventSource("/sse-reload");
+
+        let nextReconnectMsec = 500;
+
+        evtSource.onerror = () => {
+          console.log("Lost connection, waiting on the server...");
+          evtSource.close();
+
+          const tryReconnect = () => {
+            fetch("/sse-reload", { method: "HEAD" })
+              .then(() => {
+                console.log("Reconnected to dev server");
+                window.location.reload();
+              })
+              .catch(() => {
+                nextReconnectMsec *= 2;
+                console.log(
+                  `Still waiting on the server..., trying again in ${
+                    nextReconnectMsec / 1000
+                  } seconds`,
+                );
+                setTimeout(tryReconnect, nextReconnectMsec);
+              });
+          };
+          tryReconnect();
+        };
+      }
+    })();
+  </script>
+</html>

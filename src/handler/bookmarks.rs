@@ -208,7 +208,56 @@ pub async fn bookmark_create_handler(
 
 /// Handler for fetching page title from URL
 pub async fn fetch_title_handler(Form(request): Form<FetchTitleRequest>) -> impl IntoResponse {
-    // TODO: Implement actual title fetching
-    let title = format!("Title for {}", request.url);
-    HtmlTemplate(TitleInputTemplate { title })
+    match fetch_page_title(&request.url).await {
+        Ok(title) => HtmlTemplate(TitleInputTemplate { title }),
+        Err(err) => {
+            tracing::warn!("🌐 Failed to fetch title for {}: {}", request.url, err);
+            // Return the URL as fallback title
+            let fallback_title = extract_domain_from_url(&request.url).unwrap_or_else(|| request.url.clone());
+            HtmlTemplate(TitleInputTemplate { title: fallback_title })
+        }
+    }
+}
+
+/// Fetches the title from a webpage.
+///
+/// # Errors
+///
+/// Returns an error if the HTTP request fails or HTML parsing fails.
+async fn fetch_page_title(url: &str) -> anyhow::Result<String> {
+    // Create HTTP client with timeout
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .user_agent("PagePouch/1.0")
+        .build()?;
+
+    // Fetch the page
+    let response = client.get(url).send().await?;
+
+    // Check if response is successful
+    if !response.status().is_success() {
+        return Err(anyhow::anyhow!("HTTP error: {}", response.status()));
+    }
+
+    let html = response.text().await?;
+
+    // Parse HTML and extract title
+    let dom = tl::parse(&html, tl::ParserOptions::default())?;
+    let title = dom
+        .query_selector("title")
+        .and_then(|mut iter| iter.next())
+        .and_then(|node| node.get(dom.parser()))
+        .map(|node| node.inner_text(dom.parser()).trim().to_string())
+        .filter(|title| !title.is_empty())
+        .unwrap_or_else(|| extract_domain_from_url(url).unwrap_or_else(|| url.to_string()));
+
+    Ok(title)
+}
+
+/// Extracts domain name from URL as fallback title.
+fn extract_domain_from_url(url: &str) -> Option<String> {
+    url.strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))
+        .and_then(|rest| rest.split('/').next())
+        .map(|domain| domain.to_string())
 }

@@ -18,7 +18,7 @@
           name="url" 
           required
           placeholder="https://example.com/article"
-          hx-trigger="blur"
+          hx-trigger="blur changed delay:500ms"
           hx-post="/api/fetch-title"
           hx-target="#title"
           hx-swap="outerHTML"

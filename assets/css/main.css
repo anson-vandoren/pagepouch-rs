@@ -114,6 +114,9 @@
   /* Scrollbar styles */
   scrollbar-color: var(--bg3) var(--bg1);
   scrollbar-width: thin;
+
+  /* Icon filtering - default to no filter (light theme) */
+  --icon-filter: none;
 }
 
 /* Switch to dark theme based on system preference */
@@ -150,6 +153,10 @@
     --aqua-dim: var(--dark-aqua-dim);
     --gray-dim: var(--dark-gray-dim);
     --orange-dim: var(--dark-orange-dim);
+
+    /* Color icons to match text color in dark theme */
+    --icon-filter: invert(91%) sepia(24%) saturate(300%) hue-rotate(356deg) brightness(102%)
+      contrast(97%);
   }
 }
 
@@ -186,6 +193,10 @@
   --aqua-dim: var(--dark-aqua-dim);
   --gray-dim: var(--dark-gray-dim);
   --orange-dim: var(--dark-orange-dim);
+
+  /* Color icons to match text color in dark theme */
+  --icon-filter: invert(91%) sepia(24%) saturate(300%) hue-rotate(356deg) brightness(102%)
+    contrast(97%);
 }
 
 /* Force light theme - overrides system preference */
@@ -221,6 +232,9 @@
   --aqua-dim: var(--light-aqua-dim);
   --orange-dim: var(--light-orange-dim);
   --gray-dim: var(--light-gray-dim);
+
+  /* No icon filter for light theme */
+  --icon-filter: none;
 }
 
 /* A few overrides to simple.css */
@@ -339,12 +353,6 @@ select:focus {
   height: 1.2em;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --icon-filter: invert(1) opacity(0.8);
-  }
-}
-
 /* Override simple.css header styles, it is too tall */
 body > header {
   padding: 0 0.5rem;
@@ -437,10 +445,8 @@ header nav {
       flex-shrink: 0;
       /* Dunno why firefox is fucky about this, but :shrug: */
       transform: translateY(0.3em);
+      /* Action link icons need to be inverted because they're on colored background */
       filter: invert(1);
-      @media (prefers-color-scheme: dark) {
-        filter: none;
-      }
     }
   }
   a.action-link:hover {
@@ -1103,7 +1109,6 @@ search button:active {
   }
 }
 
-
 /* Form styling */
 .form-group {
   margin-bottom: 1rem;
@@ -1126,7 +1131,6 @@ search button:active {
   background-color: var(--bg1);
   color: var(--fg0);
   font-size: 1rem;
-  transition: all 0.2s ease;
 }
 
 .form-group input[type='url']:focus,

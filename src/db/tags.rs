@@ -24,7 +24,7 @@ pub struct TagInfo {
 /// # Errors
 ///
 /// Returns an error if database query fails.
-pub async fn get_user_tags(pool: &SqlitePool, user_id: &[u8]) -> Result<Vec<TagInfo>> {
+pub async fn get_user_tags(pool: &SqlitePool, user_id: uuid::Uuid) -> Result<Vec<TagInfo>> {
     let tags = sqlx::query!(
         r#"
         select distinct t.name, t.color
@@ -55,7 +55,7 @@ pub async fn get_user_tags(pool: &SqlitePool, user_id: &[u8]) -> Result<Vec<TagI
 /// # Errors
 ///
 /// Returns an error if database query fails.
-pub async fn get_popular_user_tags(pool: &SqlitePool, user_id: &[u8], limit: i64) -> Result<Vec<TagWithUsage>> {
+pub async fn get_popular_user_tags(pool: &SqlitePool, user_id: uuid::Uuid, limit: i64) -> Result<Vec<TagWithUsage>> {
     let tags = sqlx::query!(
         r#"
         select

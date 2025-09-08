@@ -36,7 +36,7 @@ pub struct BookmarkFilters {
 /// # Errors
 ///
 /// Returns an error if database query fails.
-pub async fn get_user_bookmarks(pool: &SqlitePool, user_id: &[u8], limit: i64, offset: i64) -> Result<Vec<BookmarkWithTags>> {
+pub async fn get_user_bookmarks(pool: &SqlitePool, user_id: uuid::Uuid, limit: i64, offset: i64) -> Result<Vec<BookmarkWithTags>> {
     let bookmarks = sqlx::query!(
         r#"
         select 
@@ -101,7 +101,7 @@ pub async fn get_user_bookmarks(pool: &SqlitePool, user_id: &[u8], limit: i64, o
 /// Returns an error if database query fails.
 pub async fn get_user_bookmarks_by_tag(
     pool: &SqlitePool,
-    user_id: &[u8],
+    user_id: uuid::Uuid,
     tag_name: &str,
     limit: i64,
     offset: i64,
@@ -173,7 +173,7 @@ pub async fn get_user_bookmarks_by_tag(
 /// Returns an error if database query fails.
 pub async fn search_user_bookmarks(
     pool: &SqlitePool,
-    user_id: &[u8],
+    user_id: uuid::Uuid,
     search_term: &str,
     limit: i64,
     offset: i64,
@@ -254,7 +254,7 @@ pub async fn search_user_bookmarks(
 /// # Errors
 ///
 /// Returns an error if database query fails.
-pub async fn count_user_bookmarks(pool: &SqlitePool, user_id: &[u8]) -> Result<i64> {
+pub async fn count_user_bookmarks(pool: &SqlitePool, user_id: uuid::Uuid) -> Result<i64> {
     let result = sqlx::query!(
         "select count(*) as count from bookmarks where user_id = ? and is_archived = 0",
         user_id
@@ -263,6 +263,54 @@ pub async fn count_user_bookmarks(pool: &SqlitePool, user_id: &[u8]) -> Result<i
     .await?;
 
     Ok(result.count)
+}
+
+/// Creates a new bookmark for a user.
+///
+/// # Errors
+///
+/// Returns an error if database operations fail.
+pub async fn create_bookmark(
+    pool: &SqlitePool,
+    user_id: uuid::Uuid,
+    url: &str,
+    title: &str,
+    description: Option<&str>,
+    tag_names: &[String],
+) -> Result<Vec<u8>> {
+    // Insert bookmark and get the generated bookmark_id
+    let bookmark_result = sqlx::query!(
+        r#"
+        insert into bookmarks (user_id, url, title, description)
+        values (?, ?, ?, ?)
+        returning bookmark_id
+        "#,
+        user_id,
+        url,
+        title,
+        description
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let bookmark_id = &bookmark_result.bookmark_id;
+
+    // Process and link tags
+    for tag_name in tag_names {
+        if tag_name.trim().is_empty() {
+            continue;
+        }
+
+        // Get or create the tag
+        let tag_id = crate::db::tags::get_or_create_tag(pool, tag_name, None).await?;
+
+        // Link bookmark to tag
+        sqlx::query!("insert into bookmark_tags (bookmark_id, tag_id) values (?, ?)", bookmark_id, tag_id)
+            .execute(pool)
+            .await?;
+    }
+
+    Ok(bookmark_id.clone())
 }
 
 /// Formats a Unix timestamp into a human-readable date string.

@@ -22,11 +22,8 @@ pub struct TagListTemplate {
 
 /// API handler for tag cloud (HTMX lazy loading)
 pub async fn tag_list_handler(State(state): ApiState, Extension(user): Extension<User>) -> impl IntoResponse {
-    // Convert user_id to bytes for database query
-    let user_id_bytes = user.user_id.as_bytes().to_vec();
-
     // Get tags from database
-    let db_tags = tags::get_user_tags(&state.pool, &user_id_bytes).await.unwrap_or_default();
+    let db_tags = tags::get_user_tags(&state.pool, user.user_id).await.unwrap_or_default();
 
     // Convert database results to template format
     let template_tags: Vec<Tag> = db_tags.into_iter().map(|db_tag| Tag { name: db_tag.name }).collect();

@@ -18,7 +18,7 @@ use crate::{
     AppState,
     handler::{
         auth_handler::{login_page_handler, login_user_handler, logout_handler},
-        bookmarks::bookmark_content_handler,
+        bookmarks::{bookmark_content_handler, bookmark_create_handler, bookmark_new_handler, fetch_title_handler},
         handle_404, home_handler,
         middlewares::auth_user_middleware,
         settings::{settings_handler, theme_toggle_handler, update_theme_handler},
@@ -80,8 +80,11 @@ fn create_router(app_state: Arc<AppState>) -> Result<Router> {
     let route = Router::new()
         .route("/", get(home_handler))
         .route("/settings", get(settings_handler))
+        .route("/bookmarks/new", get(bookmark_new_handler))
+        .route("/bookmarks", post(bookmark_create_handler))
         .route("/api/bookmarks", get(bookmark_content_handler))
         .route("/api/tags", get(tag_list_handler))
+        .route("/api/fetch-title", post(fetch_title_handler))
         .route("/api/settings/theme-toggle", get(theme_toggle_handler))
         .route("/api/settings/theme", post(update_theme_handler))
         .layer(from_fn_with_state(app_state.clone(), auth_user_middleware))

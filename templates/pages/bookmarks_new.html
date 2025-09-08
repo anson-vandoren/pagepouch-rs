@@ -1,0 +1,69 @@
+{% extends "layout/main.html" %}
+
+{% block title %}Add Bookmark - PagePouch{% endblock title %}
+
+{% block content %}
+<main>
+  <section>
+    <form 
+      hx-post="/bookmarks" 
+      hx-target="#form-result"
+      hx-swap="innerHTML"
+    >
+      <div class="form-group">
+        <label for="url">URL *</label>
+        <input 
+          type="url" 
+          id="url" 
+          name="url" 
+          required
+          placeholder="https://example.com/article"
+          hx-trigger="blur"
+          hx-post="/api/fetch-title"
+          hx-target="#title"
+          hx-swap="outerHTML"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="title">Title *</label>
+        <input 
+          type="text" 
+          id="title" 
+          name="title" 
+          required
+          placeholder="Article title will be fetched automatically..."
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea 
+          id="description" 
+          name="description" 
+          rows="3"
+          placeholder="Optional description or notes..."
+        ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="tags">Tags</label>
+        <input 
+          type="text" 
+          id="tags" 
+          name="tags" 
+          placeholder="programming, rust, web-dev (comma separated)"
+        >
+        <small>Enter tags separated by commas. New tags will be created automatically.</small>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit">Save</button>
+        <a href="/" role="button" class="secondary">Cancel</a>
+      </div>
+    </form>
+
+    <div id="form-result"></div>
+  </section>
+</main>
+{% endblock content %}

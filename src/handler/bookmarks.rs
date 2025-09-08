@@ -2,8 +2,9 @@
 
 use askama::Template;
 use axum::{
-    Extension,
+    Extension, Form,
     extract::{Query, State},
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
 };
 use serde::Deserialize;
@@ -11,7 +12,7 @@ use serde::Deserialize;
 use crate::{
     ApiState,
     db::{bookmarks, users::User},
-    handler::HtmlTemplate,
+    handler::{AuthState, HtmlTemplate, Toasts},
 };
 
 // Template data structures for display
@@ -65,20 +66,17 @@ pub async fn bookmark_content_handler(
     let page = params.page.unwrap_or(1);
     let offset = (page - 1) * DEFAULT_LIMIT;
 
-    // Convert user_id to bytes for database query
-    let user_id_bytes = user.user_id.as_bytes().to_vec();
-
     // Get bookmarks from database based on filters
     let db_bookmarks = if let Some(ref tag_name) = params.tag {
-        bookmarks::get_user_bookmarks_by_tag(&state.pool, &user_id_bytes, tag_name, limit, offset)
+        bookmarks::get_user_bookmarks_by_tag(&state.pool, user.user_id, tag_name, limit, offset)
             .await
             .unwrap_or_default()
     } else if let Some(ref search_query) = params.q {
-        bookmarks::search_user_bookmarks(&state.pool, &user_id_bytes, search_query, limit, offset)
+        bookmarks::search_user_bookmarks(&state.pool, user.user_id, search_query, limit, offset)
             .await
             .unwrap_or_default()
     } else {
-        bookmarks::get_user_bookmarks(&state.pool, &user_id_bytes, limit, offset)
+        bookmarks::get_user_bookmarks(&state.pool, user.user_id, limit, offset)
             .await
             .unwrap_or_default()
     };
@@ -123,4 +121,94 @@ pub async fn bookmark_content_handler(
         bookmarks: template_bookmarks,
         pagination,
     })
+}
+
+#[derive(Template)]
+#[template(path = "pages/bookmarks_new.html")]
+pub struct BookmarkNewTemplate<'a> {
+    pub title: &'a str,
+    pub toasts: Toasts,
+    pub auth_state: AuthState,
+    pub is_error: bool,
+}
+
+#[derive(Deserialize)]
+pub struct BookmarkForm {
+    pub url: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub tags: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct FetchTitleRequest {
+    pub url: String,
+}
+
+#[derive(Template)]
+#[template(
+    source = r#"<input type="text" id="title" name="title" required value="{{ title }}">"#,
+    ext = "html"
+)]
+pub struct TitleInputTemplate {
+    pub title: String,
+}
+
+/// Handler for displaying the bookmark creation form
+pub async fn bookmark_new_handler() -> impl IntoResponse {
+    HtmlTemplate(BookmarkNewTemplate {
+        title: "Add Bookmark",
+        toasts: Toasts::default(),
+        auth_state: AuthState::Authenticated,
+        is_error: false,
+    })
+}
+
+/// Handler for creating a new bookmark
+pub async fn bookmark_create_handler(
+    State(state): ApiState,
+    Extension(user): Extension<User>,
+    Form(form): Form<BookmarkForm>,
+) -> impl IntoResponse {
+    // Parse tags from comma-separated string
+    let tag_names: Vec<String> = form
+        .tags
+        .as_ref()
+        .map(|tags| {
+            tags.split(',')
+                .map(|tag| tag.trim().to_lowercase())
+                .filter(|tag| !tag.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+
+    // Create the bookmark in the database
+    match bookmarks::create_bookmark(
+        &state.pool,
+        user.user_id,
+        &form.url,
+        &form.title,
+        form.description.as_deref(),
+        &tag_names,
+    )
+    .await
+    {
+        Ok(_bookmark_id) => {
+            // Use HTMX redirect header to navigate back to home
+            let mut headers = HeaderMap::new();
+            headers.insert("HX-Redirect", "/".parse().unwrap());
+            (StatusCode::OK, headers).into_response()
+        }
+        Err(err) => {
+            tracing::error!("🚨 Failed to create bookmark: {}", err);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create bookmark").into_response()
+        }
+    }
+}
+
+/// Handler for fetching page title from URL
+pub async fn fetch_title_handler(Form(request): Form<FetchTitleRequest>) -> impl IntoResponse {
+    // TODO: Implement actual title fetching
+    let title = format!("Title for {}", request.url);
+    HtmlTemplate(TitleInputTemplate { title })
 }

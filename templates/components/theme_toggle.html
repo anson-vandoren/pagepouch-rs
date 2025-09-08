@@ -1,0 +1,88 @@
+<div class="theme-toggle">
+  <form 
+    hx-post="/api/settings/theme" 
+    hx-target="#theme-toggle-container"
+    hx-swap="innerHTML"
+  >
+    <div class="theme-options">
+      <label class="theme-option">
+        <input 
+          type="radio" 
+          name="theme" 
+          value="auto" 
+          {% if current_theme == "auto" %}checked{% endif %}
+          hx-post="/api/settings/theme"
+          hx-target="#theme-toggle-container"
+          hx-trigger="change"
+        />
+        <span class="theme-option-content">
+          <span class="theme-icon">🌓</span>
+          <span class="theme-label">Auto</span>
+          <span class="theme-description">Follow system preference</span>
+        </span>
+      </label>
+      
+      <label class="theme-option">
+        <input 
+          type="radio" 
+          name="theme" 
+          value="light" 
+          {% if current_theme == "light" %}checked{% endif %}
+          hx-post="/api/settings/theme"
+          hx-target="#theme-toggle-container"
+          hx-trigger="change"
+        />
+        <span class="theme-option-content">
+          <span class="theme-icon">☀️</span>
+          <span class="theme-label">Light</span>
+          <span class="theme-description">Always use light theme</span>
+        </span>
+      </label>
+      
+      <label class="theme-option">
+        <input 
+          type="radio" 
+          name="theme" 
+          value="dark" 
+          {% if current_theme == "dark" %}checked{% endif %}
+          hx-post="/api/settings/theme"
+          hx-target="#theme-toggle-container"
+          hx-trigger="change"
+        />
+        <span class="theme-option-content">
+          <span class="theme-icon">🌙</span>
+          <span class="theme-label">Dark</span>
+          <span class="theme-description">Always use dark theme</span>
+        </span>
+      </label>
+    </div>
+  </form>
+</div>
+
+<script>
+  // Apply theme immediately when changed
+  document.querySelectorAll('input[name="theme"]').forEach(input => {
+    input.addEventListener('change', function() {
+      const theme = this.value;
+      applyTheme(theme);
+    });
+  });
+  
+  // Apply current theme on load
+  applyTheme('{{ current_theme }}');
+  
+  function applyTheme(theme) {
+    const html = document.documentElement;
+    
+    if (theme === 'dark') {
+      html.classList.add('force-dark');
+      html.classList.remove('force-light');
+    } else if (theme === 'light') {
+      html.classList.add('force-light');
+      html.classList.remove('force-dark');
+    } else {
+      // auto - remove forced classes, let CSS media query handle it
+      html.classList.remove('force-dark', 'force-light');
+    }
+  }
+</script>

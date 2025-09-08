@@ -25,6 +25,33 @@
     {% include "partials/footer.html" %}
   </body>
   <script>
+    // Theme management - run immediately to avoid flash
+    (function() {
+      // Check for saved theme preference or use browser preference
+      const getCookie = (name) => {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+          const [key, value] = cookie.trim().split('=');
+          if (key === name) return decodeURIComponent(value);
+        }
+        return null;
+      };
+      
+      const theme = getCookie('theme') || 'auto';
+      const html = document.documentElement;
+      
+      if (theme === 'dark') {
+        html.classList.add('force-dark');
+        html.classList.remove('force-light');
+      } else if (theme === 'light') {
+        html.classList.add('force-light'); 
+        html.classList.remove('force-dark');
+      } else {
+        // auto - remove all forced classes
+        html.classList.remove('force-dark', 'force-light');
+      }
+    })();
+
     // Auto-reload on server restart
     (function () {
       // Only in dev

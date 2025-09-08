@@ -1,36 +1,102 @@
 :root {
-  /* Default to gruvbox light */
-  --bg_h: #f9f5d7;
-  --bg0: #fbf1c7;
-  --bg_s: #f2e5bc;
-  --bg1: #ebdbb2;
-  --bg2: #d5c4a1;
-  --bg3: #bdae93;
-  --bg4: #a89984;
+  /* Light theme colors - default */
+  --light-bg_h: #f9f5d7;
+  --light-bg0: #fbf1c7;
+  --light-bg_s: #f2e5bc;
+  --light-bg1: #ebdbb2;
+  --light-bg2: #d5c4a1;
+  --light-bg3: #bdae93;
+  --light-bg4: #a89984;
 
-  --fg0: #282828;
-  --fg1: #3c3836;
-  --fg2: #504945;
-  --fg3: #665c54;
-  --fg4: #7c6f64;
+  --light-fg0: #282828;
+  --light-fg1: #3c3836;
+  --light-fg2: #504945;
+  --light-fg3: #665c54;
+  --light-fg4: #7c6f64;
 
-  --red: #9d0006;
-  --green: #79740e;
-  --yellow: #b57614;
-  --blue: #076678;
-  --purple: #8f3f71;
-  --aqua: #427b58;
-  --orange: #af3a03;
-  --gray: #928374;
+  --light-red: #9d0006;
+  --light-green: #79740e;
+  --light-yellow: #b57614;
+  --light-blue: #076678;
+  --light-purple: #8f3f71;
+  --light-aqua: #427b58;
+  --light-orange: #af3a03;
+  --light-gray: #928374;
 
-  --red-dim: #cc2412;
-  --green-dim: #98971a;
-  --yellow-dim: #d79921;
-  --blue-dim: #458598;
-  --purple-dim: #b16286;
-  --aqua-dim: #689d6a;
-  --orange-dim: #d65d0e;
-  --gray-dim: #7c6f64;
+  --light-red-dim: #cc2412;
+  --light-green-dim: #98971a;
+  --light-yellow-dim: #d79921;
+  --light-blue-dim: #458598;
+  --light-purple-dim: #b16286;
+  --light-aqua-dim: #689d6a;
+  --light-orange-dim: #d65d0e;
+  --light-gray-dim: #7c6f64;
+
+  /* Dark theme colors */
+  --dark-bg_h: #1d2021;
+  --dark-bg0: #282828;
+  --dark-bg_s: #32302f;
+  --dark-bg1: #3c3836;
+  --dark-bg2: #504945;
+  --dark-bg3: #665c54;
+  --dark-bg4: #7c6f64;
+
+  --dark-fg0: #fbf1c7;
+  --dark-fg1: #ebdbb2;
+  --dark-fg2: #d5c4a1;
+  --dark-fg3: #bdae93;
+  --dark-fg4: #a89984;
+
+  --dark-red: #fb4934;
+  --dark-green: #b8bb26;
+  --dark-yellow: #fabd2f;
+  --dark-blue: #83a598;
+  --dark-purple: #d3869b;
+  --dark-aqua: #8ec07c;
+  --dark-gray: #928374;
+  --dark-orange: #fe8019;
+
+  --dark-red-dim: #cc2412;
+  --dark-green-dim: #98971a;
+  --dark-yellow-dim: #d79921;
+  --dark-blue-dim: #458588;
+  --dark-purple-dim: #b16286;
+  --dark-aqua-dim: #689d6a;
+  --dark-gray-dim: #a89984;
+  --dark-orange-dim: #d65d0e;
+
+  /* Active theme variables - default to light */
+  --bg_h: var(--light-bg_h);
+  --bg0: var(--light-bg0);
+  --bg_s: var(--light-bg_s);
+  --bg1: var(--light-bg1);
+  --bg2: var(--light-bg2);
+  --bg3: var(--light-bg3);
+  --bg4: var(--light-bg4);
+
+  --fg0: var(--light-fg0);
+  --fg1: var(--light-fg1);
+  --fg2: var(--light-fg2);
+  --fg3: var(--light-fg3);
+  --fg4: var(--light-fg4);
+
+  --red: var(--light-red);
+  --green: var(--light-green);
+  --yellow: var(--light-yellow);
+  --blue: var(--light-blue);
+  --purple: var(--light-purple);
+  --aqua: var(--light-aqua);
+  --orange: var(--light-orange);
+  --gray: var(--light-gray);
+
+  --red-dim: var(--light-red-dim);
+  --green-dim: var(--light-green-dim);
+  --yellow-dim: var(--light-yellow-dim);
+  --blue-dim: var(--light-blue-dim);
+  --purple-dim: var(--light-purple-dim);
+  --aqua-dim: var(--light-aqua-dim);
+  --orange-dim: var(--light-orange-dim);
+  --gray-dim: var(--light-gray-dim);
 
   /* Simple.css variable names */
   --bg: var(--bg0);
@@ -50,40 +116,111 @@
   scrollbar-width: thin;
 }
 
+/* Switch to dark theme based on system preference */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg_h: #1d2021;
-    --bg0: #282828;
-    --bg_s: #32302f;
-    --bg1: #3c3836;
-    --bg2: #504945;
-    --bg3: #665c54;
-    --bg4: #7c6f64;
+    --bg_h: var(--dark-bg_h);
+    --bg0: var(--dark-bg0);
+    --bg_s: var(--dark-bg_s);
+    --bg1: var(--dark-bg1);
+    --bg2: var(--dark-bg2);
+    --bg3: var(--dark-bg3);
+    --bg4: var(--dark-bg4);
 
-    --fg0: #fbf1c7;
-    --fg1: #ebdbb2;
-    --fg2: #d5c4a1;
-    --fg3: #bdae93;
-    --fg4: #a89984;
+    --fg0: var(--dark-fg0);
+    --fg1: var(--dark-fg1);
+    --fg2: var(--dark-fg2);
+    --fg3: var(--dark-fg3);
+    --fg4: var(--dark-fg4);
 
-    --red: #fb4934;
-    --green: #b8bb26;
-    --yellow: #fabd2f;
-    --blue: #83a598;
-    --purple: #d3869b;
-    --aqua: #8ec07c;
-    --gray: #928374;
-    --orange: #fe8019;
+    --red: var(--dark-red);
+    --green: var(--dark-green);
+    --yellow: var(--dark-yellow);
+    --blue: var(--dark-blue);
+    --purple: var(--dark-purple);
+    --aqua: var(--dark-aqua);
+    --orange: var(--dark-orange);
+    --gray: var(--dark-gray);
 
-    --red-dim: #cc2412;
-    --green-dim: #98971a;
-    --yellow-dim: #d79921;
-    --blue-dim: #458588;
-    --purple-dim: #b16286;
-    --aqua-dim: #689d6a;
-    --gray-dim: #a89984;
-    --orange-dim: #d65d0e;
+    --red-dim: var(--dark-red-dim);
+    --green-dim: var(--dark-green-dim);
+    --yellow-dim: var(--dark-yellow-dim);
+    --blue-dim: var(--dark-blue-dim);
+    --purple-dim: var(--dark-purple-dim);
+    --aqua-dim: var(--dark-aqua-dim);
+    --gray-dim: var(--dark-gray-dim);
+    --orange-dim: var(--dark-orange-dim);
   }
+}
+
+/* Force dark theme - overrides system preference */
+.force-dark {
+  --bg_h: var(--dark-bg_h);
+  --bg0: var(--dark-bg0);
+  --bg_s: var(--dark-bg_s);
+  --bg1: var(--dark-bg1);
+  --bg2: var(--dark-bg2);
+  --bg3: var(--dark-bg3);
+  --bg4: var(--dark-bg4);
+
+  --fg0: var(--dark-fg0);
+  --fg1: var(--dark-fg1);
+  --fg2: var(--dark-fg2);
+  --fg3: var(--dark-fg3);
+  --fg4: var(--dark-fg4);
+
+  --red: var(--dark-red);
+  --green: var(--dark-green);
+  --yellow: var(--dark-yellow);
+  --blue: var(--dark-blue);
+  --purple: var(--dark-purple);
+  --aqua: var(--dark-aqua);
+  --orange: var(--dark-orange);
+  --gray: var(--dark-gray);
+
+  --red-dim: var(--dark-red-dim);
+  --green-dim: var(--dark-green-dim);
+  --yellow-dim: var(--dark-yellow-dim);
+  --blue-dim: var(--dark-blue-dim);
+  --purple-dim: var(--dark-purple-dim);
+  --aqua-dim: var(--dark-aqua-dim);
+  --gray-dim: var(--dark-gray-dim);
+  --orange-dim: var(--dark-orange-dim);
+}
+
+/* Force light theme - overrides system preference */
+.force-light {
+  --bg_h: var(--light-bg_h);
+  --bg0: var(--light-bg0);
+  --bg_s: var(--light-bg_s);
+  --bg1: var(--light-bg1);
+  --bg2: var(--light-bg2);
+  --bg3: var(--light-bg3);
+  --bg4: var(--light-bg4);
+
+  --fg0: var(--light-fg0);
+  --fg1: var(--light-fg1);
+  --fg2: var(--light-fg2);
+  --fg3: var(--light-fg3);
+  --fg4: var(--light-fg4);
+
+  --red: var(--light-red);
+  --green: var(--light-green);
+  --yellow: var(--light-yellow);
+  --blue: var(--light-blue);
+  --purple: var(--light-purple);
+  --aqua: var(--light-aqua);
+  --orange: var(--light-orange);
+  --gray: var(--light-gray);
+
+  --red-dim: var(--light-red-dim);
+  --green-dim: var(--light-green-dim);
+  --yellow-dim: var(--light-yellow-dim);
+  --blue-dim: var(--light-blue-dim);
+  --purple-dim: var(--light-purple-dim);
+  --aqua-dim: var(--light-aqua-dim);
+  --orange-dim: var(--light-orange-dim);
+  --gray-dim: var(--light-gray-dim);
 }
 
 /* A few overrides to simple.css */
@@ -794,5 +931,174 @@ search button:active {
   }
   100% {
     transform: rotate(360deg);
+  }
+}
+
+/* Settings page styling */
+.settings-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.settings-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--bg3);
+}
+
+.settings-header h2 {
+  margin: 0 0 0.5rem 0;
+  color: var(--fg0);
+}
+
+.settings-header p {
+  margin: 0;
+  color: var(--fg2);
+  font-size: 0.95rem;
+}
+
+.settings-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.settings-section {
+  background-color: var(--bg1);
+  border: 1px solid var(--bg3);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.settings-section h3 {
+  margin: 0 0 1rem 0;
+  color: var(--fg1);
+  font-size: 1.125rem;
+}
+
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.settings-item label {
+  font-weight: 600;
+  color: var(--fg1);
+  min-width: 100px;
+}
+
+.settings-coming-soon {
+  color: var(--fg3);
+  font-style: italic;
+  margin: 0;
+}
+
+/* Theme toggle component */
+.theme-toggle {
+  flex: 1;
+}
+
+.theme-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.theme-option {
+  display: block;
+  cursor: pointer;
+  background-color: var(--bg0);
+  border: 2px solid var(--bg2);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.theme-option:hover {
+  border-color: var(--bg3);
+  background-color: var(--bg_s);
+}
+
+.theme-option input[type='radio'] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+  margin: 0;
+  visibility: hidden;
+}
+
+.theme-option input[type='radio']:checked + .theme-option-content {
+  color: var(--accent);
+}
+
+.theme-option input[type='radio']:checked {
+  ~ .theme-option-content::after {
+    content: '';
+    visibility: hidden;
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background-color: var(--accent);
+    border-radius: 50%;
+  }
+}
+
+.theme-option:has(input[type='radio']:checked) {
+  border-color: var(--accent);
+  background-color: var(--bg_h);
+}
+
+.theme-option-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+}
+
+.theme-icon {
+  font-size: 1.25rem;
+  width: 1.5rem;
+  text-align: center;
+}
+
+.theme-label {
+  font-weight: 600;
+  color: var(--fg1);
+  min-width: 60px;
+}
+
+.theme-description {
+  color: var(--fg3);
+  font-size: 0.875rem;
+  flex: 1;
+}
+
+@media (max-width: 600px) {
+  .settings-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .theme-options {
+    width: 100%;
+  }
+
+  .theme-option-content {
+    flex-wrap: wrap;
+  }
+
+  .theme-description {
+    width: 100%;
+    margin-left: 2.25rem;
+    margin-top: 0.25rem;
   }
 }

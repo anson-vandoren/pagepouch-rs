@@ -3,6 +3,7 @@
 pub mod auth_handler;
 pub mod bookmarks;
 pub mod middlewares;
+pub mod settings;
 pub mod tags;
 use askama::Template;
 use axum::{

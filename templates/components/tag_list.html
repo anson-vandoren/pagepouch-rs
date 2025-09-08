@@ -1,0 +1,9 @@
+<div class="tag-cloud">
+  {% for tag in tags %}
+  <span 
+    class="tag-cloud-item"
+    hx-get="/api/bookmarks?tag={{ tag.name }}"
+    hx-target="#bookmark-content"
+  >{{ tag.name }}</span>
+  {% endfor %}
+</div>

@@ -1,10 +1,11 @@
 //! HTTP request handlers and response templates.
 
 pub mod auth_handler;
+pub mod bookmarks;
 pub mod middlewares;
+pub mod tags;
 use askama::Template;
 use axum::{
-    Extension,
     extract::State,
     http::StatusCode,
     response::{Html, IntoResponse, Redirect},
@@ -13,7 +14,7 @@ use axum_extra::extract::CookieJar;
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
-use crate::{ApiState, db::users::User, handler::middlewares::check_session_cookie};
+use crate::{ApiState, handler::middlewares::check_session_cookie};
 
 /// Authentication state for template rendering.
 ///
@@ -58,10 +59,9 @@ pub struct Toast {
 type Toasts = Vec<Toast>;
 
 #[derive(Default, Template)]
-#[template(path = "auth/home.html")]
+#[template(path = "pages/home.html")]
 struct HomeTemplate<'a> {
     title: &'a str,
-    username: &'a str,
     toasts: Toasts,
     auth_state: AuthState,
     is_error: bool,
@@ -71,7 +71,6 @@ struct HomeTemplate<'a> {
 #[template(path = "error/error_404.html")]
 struct Error404Template<'a> {
     title: &'a str,
-    username: &'a str,
     reason: &'a str,
     link: &'a str,
     toasts: Toasts,
@@ -83,7 +82,6 @@ struct Error404Template<'a> {
 #[template(path = "error/error_401.html")]
 struct Error401Template<'a> {
     title: &'a str,
-    username: &'a str,
     reason: &'a str,
     toasts: Toasts,
     auth_state: AuthState,
@@ -94,7 +92,6 @@ struct Error401Template<'a> {
 #[template(path = "auth/login.html")]
 struct LoginTemplate<'a> {
     title: &'a str,
-    username: &'a str,
     toasts: Toasts,
     auth_state: AuthState,
     is_error: bool,
@@ -104,7 +101,7 @@ struct LoginTemplate<'a> {
 ///
 /// Requires authentication - redirects to login if not authenticated.
 /// Displays any pending toast messages from the user's session.
-pub async fn home_handler(State(state): ApiState, jar: CookieJar, Extension(user): Extension<User>) -> impl IntoResponse {
+pub async fn home_handler(State(state): ApiState, jar: CookieJar) -> impl IntoResponse {
     let session = check_session_cookie(&state, &jar).await;
 
     // Redirect to login if not authenticated
@@ -120,7 +117,6 @@ pub async fn home_handler(State(state): ApiState, jar: CookieJar, Extension(user
 
     HtmlTemplate(HomeTemplate {
         title: "Home",
-        username: &user.username,
         auth_state: AuthState::Authenticated,
         toasts,
         ..Default::default()

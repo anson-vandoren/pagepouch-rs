@@ -16,11 +16,13 @@
         <a hx-swap="transition:true" href="/login">Log In</a>
       </footer>
       {% when AuthState::Authenticated %}
-      {% include "content/bookmarks.html" %}
+      {% block main_content %}{% endblock main_content %}
     {% endmatch %}
   </main>
 {% endblock content %}
 
 {% block sidebar %}
-  {% include "content/tags.html" %}
+  {% if auth_state == AuthState::Authenticated %}
+    {% block sidebar_content %}{% endblock sidebar_content %}
+  {% endif %}
 {% endblock sidebar %}

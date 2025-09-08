@@ -1,0 +1,33 @@
+<nav class="pagination" aria-label="Pagination">
+  {% match pagination %}
+    {% when Some with ( pagination ) %}
+    {% if pagination.has_prev %}
+      <button class="pagination-btn pagination-prev" aria-label="Previous page">
+        &lt; Prev
+      </button>
+    {% endif %}
+
+    {% for page in pagination.page_links %}
+      {% if page.is_ellipsis %}
+        <span class="pagination-ellipsis">…</span>
+      {% else %}
+        <button
+          class="pagination-btn pagination-page{% if page.is_current %}pagination-active{% endif %}"
+          {% if page.is_current %}
+            aria-label="Current page, page {{ page.number }}"
+          {% endif %}
+        >
+          {{ page.number }}
+        </button>
+      {% endif %}
+    {% endfor %}
+
+    {% if pagination.has_next %}
+      <button class="pagination-btn pagination-next" aria-label="Next page">
+        Next &gt;
+      </button>
+    {% endif %}
+    {% when None %}
+    <p class="no-results">No bookmarks found.</p>
+  {% endmatch %}
+</nav>

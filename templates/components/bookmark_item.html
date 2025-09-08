@@ -1,0 +1,19 @@
+<article class="bookmark-item">
+  <h3 class="bookmark-title">
+    <a href="{{ bookmark.url }}" target="_blank" rel="noopener"
+      >{{ bookmark.title }}</a
+    >
+  </h3>
+  <div class="bookmark-tags">
+    {% for tag in bookmark.tags %}
+      <span class="tag">{{ tag.name }}</span>
+    {% endfor %}
+  </div>
+  <div class="bookmark-meta">
+    <time datetime="{{ bookmark.created_at }}"
+      >{{ bookmark.formatted_date }}</time
+    >
+    • saved by
+    <span class="username">{{ bookmark.created_by }}</span>
+  </div>
+</article>

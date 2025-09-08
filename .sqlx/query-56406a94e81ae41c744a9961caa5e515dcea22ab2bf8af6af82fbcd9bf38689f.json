@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert or ignore into tags (name, color) values (?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "56406a94e81ae41c744a9961caa5e515dcea22ab2bf8af6af82fbcd9bf38689f"
+}

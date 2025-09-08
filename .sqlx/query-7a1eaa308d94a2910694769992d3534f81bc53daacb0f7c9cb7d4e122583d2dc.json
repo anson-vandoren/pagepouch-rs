@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "select tag_id from tags where name = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "tag_id",
+        "ordinal": 0,
+        "type_info": "Blob"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7a1eaa308d94a2910694769992d3534f81bc53daacb0f7c9cb7d4e122583d2dc"
+}

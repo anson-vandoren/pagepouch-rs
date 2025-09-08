@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "select user_id from users where username = 'admin'",
+  "describe": {
+    "columns": [
+      {
+        "name": "user_id",
+        "ordinal": 0,
+        "type_info": "Blob"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6300fce1f808c0dbd6cc61098034cf81a8efb14f6935d6350dc83c25e78d6746"
+}

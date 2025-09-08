@@ -8,9 +8,13 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::{ApiState, db::users::User, handler::HtmlTemplate};
+use crate::{
+    ApiState,
+    db::{bookmarks, users::User},
+    handler::HtmlTemplate,
+};
 
-// Mock data structures - replace with your actual models
+// Template data structures for display
 #[derive(Clone)]
 pub struct Bookmark {
     pub url: String,
@@ -30,7 +34,7 @@ pub struct Pagination {
 
 #[derive(Clone)]
 pub struct PageLink {
-    pub number: usize,
+    pub number: i64,
     pub is_current: bool,
     pub is_ellipsis: bool,
 }
@@ -46,166 +50,77 @@ pub struct BookmarkContentTemplate {
 pub struct BookmarkQuery {
     pub q: Option<String>,   // Search query
     pub tag: Option<String>, // Filter by tag
-    pub page: Option<usize>, // Page number
+    pub page: Option<i64>,   // Page number
 }
 
 /// API handler for bookmark content (HTMX lazy loading)
 pub async fn bookmark_content_handler(
-    State(_state): ApiState,
-    Extension(_user): Extension<User>,
+    State(state): ApiState,
+    Extension(user): Extension<User>,
     Query(params): Query<BookmarkQuery>,
 ) -> impl IntoResponse {
-    // Mock data - replace with actual database queries
-    let bookmarks = create_mock_bookmarks();
+    const DEFAULT_LIMIT: i64 = 20;
 
-    // Filter bookmarks based on query parameters
-    let filtered_bookmarks = filter_bookmarks(bookmarks, &params);
+    let limit = DEFAULT_LIMIT;
+    let page = params.page.unwrap_or(1);
+    let offset = (page - 1) * DEFAULT_LIMIT;
 
-    let pagination = Some(Pagination {
-        has_prev: true,
-        has_next: true,
-        page_links: vec![
-            PageLink {
-                number: 1,
-                is_current: false,
-                is_ellipsis: false,
-            },
-            PageLink {
-                number: 0,
-                is_current: false,
-                is_ellipsis: true,
-            },
-            PageLink {
-                number: 4,
-                is_current: false,
-                is_ellipsis: false,
-            },
-            PageLink {
-                number: 5,
+    // Convert user_id to bytes for database query
+    let user_id_bytes = user.user_id.as_bytes().to_vec();
+
+    // Get bookmarks from database based on filters
+    let db_bookmarks = if let Some(ref tag_name) = params.tag {
+        bookmarks::get_user_bookmarks_by_tag(&state.pool, &user_id_bytes, tag_name, limit, offset)
+            .await
+            .unwrap_or_default()
+    } else if let Some(ref search_query) = params.q {
+        bookmarks::search_user_bookmarks(&state.pool, &user_id_bytes, search_query, limit, offset)
+            .await
+            .unwrap_or_default()
+    } else {
+        bookmarks::get_user_bookmarks(&state.pool, &user_id_bytes, limit, offset)
+            .await
+            .unwrap_or_default()
+    };
+
+    // Convert database results to template format
+    let template_bookmarks: Vec<Bookmark> = db_bookmarks
+        .into_iter()
+        .map(|db_bookmark| {
+            let tags: Vec<super::tags::Tag> = db_bookmark
+                .tags
+                .into_iter()
+                .map(|tag_info| super::tags::Tag { name: tag_info.name })
+                .collect();
+
+            Bookmark {
+                url: db_bookmark.url,
+                title: db_bookmark.title,
+                tags,
+                created_by: db_bookmark.created_by,
+                created_at: db_bookmark.created_at.to_string(),
+                formatted_date: db_bookmark.formatted_date,
+            }
+        })
+        .collect();
+
+    // TODO: Implement proper pagination based on total count
+    let pagination = if i64::try_from(template_bookmarks.len()).unwrap_or(0) == limit {
+        Some(Pagination {
+            has_prev: page > 1,
+            has_next: true, // Assume there might be more
+            page_links: vec![PageLink {
+                number: page,
                 is_current: true,
                 is_ellipsis: false,
-            },
-            PageLink {
-                number: 6,
-                is_current: false,
-                is_ellipsis: false,
-            },
-            PageLink {
-                number: 0,
-                is_current: false,
-                is_ellipsis: true,
-            },
-            PageLink {
-                number: 32,
-                is_current: false,
-                is_ellipsis: false,
-            },
-        ],
-    });
+            }],
+        })
+    } else {
+        None // No pagination needed
+    };
 
     HtmlTemplate(BookmarkContentTemplate {
-        bookmarks: filtered_bookmarks,
+        bookmarks: template_bookmarks,
         pagination,
     })
-}
-
-fn create_mock_bookmarks() -> Vec<Bookmark> {
-    use super::tags::Tag;
-
-    vec![
-        Bookmark {
-            url: "https://rust-lang.org".to_string(),
-            title: "The Rust Programming Language".to_string(),
-            tags: vec![
-                Tag {
-                    name: "programming".to_string(),
-                },
-                Tag { name: "rust".to_string() },
-                Tag {
-                    name: "systems".to_string(),
-                },
-            ],
-            created_by: "anson".to_string(),
-            created_at: "2024-12-15".to_string(),
-            formatted_date: "Dec 15, 2024".to_string(),
-        },
-        Bookmark {
-            url: "https://htmx.org".to_string(),
-            title: "HTMX - High Power Tools for HTML".to_string(),
-            tags: vec![
-                Tag {
-                    name: "web-dev".to_string(),
-                },
-                Tag {
-                    name: "javascript".to_string(),
-                },
-                Tag { name: "htmx".to_string() },
-            ],
-            created_by: "anson".to_string(),
-            created_at: "2024-12-10".to_string(),
-            formatted_date: "Dec 10, 2024".to_string(),
-        },
-        Bookmark {
-            url: "https://github.com/tokio-rs/axum".to_string(),
-            title: "Axum Web Framework for Rust".to_string(),
-            tags: vec![
-                Tag { name: "rust".to_string() },
-                Tag {
-                    name: "web-framework".to_string(),
-                },
-                Tag { name: "axum".to_string() },
-                Tag { name: "tokio".to_string() },
-                Tag { name: "async".to_string() },
-                Tag { name: "http".to_string() },
-                Tag {
-                    name: "server".to_string(),
-                },
-                Tag {
-                    name: "middleware".to_string(),
-                },
-                Tag {
-                    name: "routing".to_string(),
-                },
-            ],
-            created_by: "anson".to_string(),
-            created_at: "2024-12-08".to_string(),
-            formatted_date: "Dec 8, 2024".to_string(),
-        },
-        Bookmark {
-            url: "https://simplecss.org".to_string(),
-            title: "Simple.css - A CSS Framework for Semantic HTML".to_string(),
-            tags: vec![
-                Tag { name: "css".to_string() },
-                Tag {
-                    name: "framework".to_string(),
-                },
-                Tag {
-                    name: "simple".to_string(),
-                },
-            ],
-            created_by: "anson".to_string(),
-            created_at: "2024-12-05".to_string(),
-            formatted_date: "Dec 5, 2024".to_string(),
-        },
-    ]
-}
-
-fn filter_bookmarks(mut bookmarks: Vec<Bookmark>, params: &BookmarkQuery) -> Vec<Bookmark> {
-    // Filter by tag
-    if let Some(tag_name) = &params.tag {
-        bookmarks.retain(|bookmark| bookmark.tags.iter().any(|tag| tag.name == *tag_name));
-    }
-
-    // Filter by search query
-    if let Some(query) = &params.q {
-        let query = query.to_lowercase();
-        bookmarks.retain(|bookmark| {
-            bookmark.title.to_lowercase().contains(&query)
-                || bookmark.url.to_lowercase().contains(&query)
-                || bookmark.tags.iter().any(|tag| tag.name.to_lowercase().contains(&query))
-        });
-    }
-
-    // TODO: Handle pagination
-    bookmarks
 }

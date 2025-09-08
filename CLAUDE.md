@@ -62,11 +62,12 @@ Current tables:
 
 - `users` - User accounts with UUID primary keys, usernames, hashed passwords
 - `user_sessions` - Session management for authentication
+- `bookmarks` - URLs with title, description, creation metadata, and user ownership
+- `tags` - Normalized tag names with optional colors
+- `bookmark_tags` - Junction table for many-to-many bookmark-tag relationships
+- `bookmark_imports` - Import history tracking for bulk operations
 
-Planned tables (from PLANNING.md):
-
-- Bookmarks with URL, title, metadata, tags
-- Tag management with fuzzy search and bulk operations
+Database operations use SQLx query! macros for compile-time checked queries with SQLite blob UUIDs.
 
 ### Configuration
 
@@ -81,6 +82,8 @@ Planned tables (from PLANNING.md):
 - Server-sent events endpoint (`/sse-reload`) for development
 - Comprehensive tracing with separate formatters for app vs external crates
 - Rate limiting: 1 req/sec for login (burst 3), 2 req/sec general (burst 500)
+- Dummy data population in debug builds with realistic bookmarks and tags
+- Theme switching with CSS custom properties (light/dark/auto modes)
 
 ## Code Style
 
@@ -104,3 +107,13 @@ Planned tables (from PLANNING.md):
 ## Logging
 
 - When writing logging/tracing lines, try to use emojis in the logged content when it makes sense.
+
+## Backend Development Requirements
+
+**IMPORTANT**: After completing any backend task involving code changes, you MUST:
+
+1. **Ensure `cargo check` completes successfully** - All code must compile without errors before considering a task complete
+2. **Run `mise run clippy` and fix all addressable lints** - Code quality standards must be maintained. It is almost never the right answer to address a lint by #[allow(clippy::...)]
+3. **Run `mise run migrate`** if database schema or query changes were made - Ensure SQLx metadata is up to date
+
+These steps are mandatory for task completion and ensure code quality and compilation integrity.

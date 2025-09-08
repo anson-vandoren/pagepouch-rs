@@ -3,6 +3,8 @@
 //! This module provides database connection pooling, automatic migrations,
 //! and submodules for specific database operations.
 
+pub mod bookmarks;
+pub mod tags;
 pub mod user_session;
 pub mod users;
 use anyhow::{Context as _, Result};
@@ -97,6 +99,7 @@ async fn init_for_dev(pool: &SqlitePool) -> Result<()> {
 ///
 /// Returns an error if database operations fail.
 #[cfg(debug_assertions)]
+#[allow(clippy::too_many_lines)] // Dev-only function with extensive test data - splitting would hurt readability
 async fn populate_dummy_data(pool: &SqlitePool) -> Result<()> {
     // Check if we already have bookmarks data
     let existing_bookmarks = sqlx::query!("select count(*) as count from bookmarks").fetch_one(pool).await?;

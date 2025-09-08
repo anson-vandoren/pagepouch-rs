@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        select distinct t.name, t.color\n        from tags t\n        join bookmark_tags bt on t.tag_id = bt.tag_id\n        join bookmarks b on bt.bookmark_id = b.bookmark_id\n        where b.user_id = ? and b.is_archived = 0\n        order by t.name\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "name",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "color",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "bb65e3ca2c6487894709d746ad9706f3d685063e5437e1636fb3aac7ded23309"
+}

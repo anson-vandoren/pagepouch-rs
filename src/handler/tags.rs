@@ -3,7 +3,11 @@
 use askama::Template;
 use axum::{Extension, extract::State, response::IntoResponse};
 
-use crate::{ApiState, db::users::User, handler::HtmlTemplate};
+use crate::{
+    ApiState,
+    db::{tags, users::User},
+    handler::HtmlTemplate,
+};
 
 #[derive(Clone)]
 pub struct Tag {
@@ -17,73 +21,15 @@ pub struct TagListTemplate {
 }
 
 /// API handler for tag cloud (HTMX lazy loading)
-pub async fn tag_list_handler(State(_state): ApiState, Extension(_user): Extension<User>) -> impl IntoResponse {
-    // Mock data - replace with actual database queries
-    let tags = create_mock_tags();
+pub async fn tag_list_handler(State(state): ApiState, Extension(user): Extension<User>) -> impl IntoResponse {
+    // Convert user_id to bytes for database query
+    let user_id_bytes = user.user_id.as_bytes().to_vec();
 
-    HtmlTemplate(TagListTemplate { tags })
-}
+    // Get tags from database
+    let db_tags = tags::get_user_tags(&state.pool, &user_id_bytes).await.unwrap_or_default();
 
-fn create_mock_tags() -> Vec<Tag> {
-    vec![
-        Tag { name: "rust".to_string() },
-        Tag {
-            name: "programming".to_string(),
-        },
-        Tag {
-            name: "web-dev".to_string(),
-        },
-        Tag {
-            name: "javascript".to_string(),
-        },
-        Tag { name: "htmx".to_string() },
-        Tag { name: "css".to_string() },
-        Tag {
-            name: "web-framework".to_string(),
-        },
-        Tag { name: "axum".to_string() },
-        Tag {
-            name: "systems".to_string(),
-        },
-        Tag { name: "tokio".to_string() },
-        Tag {
-            name: "framework".to_string(),
-        },
-        Tag {
-            name: "simple".to_string(),
-        },
-        Tag {
-            name: "backend".to_string(),
-        },
-        Tag {
-            name: "database".to_string(),
-        },
-        Tag {
-            name: "sqlite".to_string(),
-        },
-        Tag {
-            name: "authentication".to_string(),
-        },
-        Tag { name: "api".to_string() },
-        Tag { name: "async".to_string() },
-        Tag { name: "http".to_string() },
-        Tag {
-            name: "server".to_string(),
-        },
-        Tag {
-            name: "middleware".to_string(),
-        },
-        Tag {
-            name: "routing".to_string(),
-        },
-        Tag {
-            name: "templates".to_string(),
-        },
-        Tag {
-            name: "bookmarks".to_string(),
-        },
-        Tag {
-            name: "self-hosted".to_string(),
-        },
-    ]
+    // Convert database results to template format
+    let template_tags: Vec<Tag> = db_tags.into_iter().map(|db_tag| Tag { name: db_tag.name }).collect();
+
+    HtmlTemplate(TagListTemplate { tags: template_tags })
 }

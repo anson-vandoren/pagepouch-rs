@@ -61,11 +61,11 @@ type Toasts = Vec<Toast>;
 
 #[derive(Default, Template)]
 #[template(path = "pages/home.html")]
-struct HomeTemplate<'a> {
-    title: &'a str,
-    toasts: Toasts,
-    auth_state: AuthState,
-    is_error: bool,
+pub struct HomeTemplate<'a> {
+    pub title: &'a str,
+    pub toasts: Toasts,
+    pub auth_state: AuthState,
+    pub is_error: bool,
 }
 
 #[derive(Default, Template)]
@@ -100,27 +100,20 @@ struct LoginTemplate<'a> {
 
 /// Handler for the home page.
 ///
-/// Requires authentication - redirects to login if not authenticated.
+/// Authentication is guaranteed by middleware.
 /// Displays any pending toast messages from the user's session.
 pub async fn home_handler(State(state): ApiState, jar: CookieJar) -> impl IntoResponse {
-    let session = check_session_cookie(&state, &jar).await;
+    let mut session_lookup = check_session_cookie(&state, &jar)
+        .await
+        .expect("Authentication guaranteed by middleware");
 
-    // Redirect to login if not authenticated
-    if session.is_err() {
-        return Redirect::to("/login").into_response();
-    }
-
-    let toasts = if let Ok(mut session_lookup) = session {
-        session_lookup.session.take_messages(&state.pool).await
-    } else {
-        Vec::new()
-    };
+    let toasts = session_lookup.session.take_messages(&state.pool).await;
 
     HtmlTemplate(HomeTemplate {
         title: "Home",
         auth_state: AuthState::Authenticated,
         toasts,
-        ..Default::default()
+        is_error: false,
     })
     .into_response()
 }

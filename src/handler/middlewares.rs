@@ -34,21 +34,16 @@ use crate::{
 /// 2. Verifies the JWT signature
 /// 3. Looks up the session in the database
 /// 4. Adds the user to the request extensions if valid
-/// 5. Returns 401 Unauthorized if authentication fails
+/// 5. Redirects to login if authentication fails
 ///
 /// Applied to routes that require authentication.
 pub async fn auth_user_middleware(State(state): ApiState, jar: CookieJar, mut req: Request, next: Next) -> impl IntoResponse {
     let user = check_session_cookie(&state, &jar).await;
     let SessionLookup { user, signed_token, .. } = match user {
         Ok(user) => user,
-        Err(reason) => {
-            let template = Error401Template {
-                title: "Unauthorized",
-                reason: &reason,
-                is_error: true,
-                ..Default::default()
-            };
-            return (StatusCode::UNAUTHORIZED, jar.remove(SESSION_COOKIE), HtmlTemplate(template)).into_response();
+        Err(_reason) => {
+            // Redirect to login instead of returning 401
+            return (jar.remove(SESSION_COOKIE), axum::response::Redirect::to("/login")).into_response();
         }
     };
 

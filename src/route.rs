@@ -95,11 +95,15 @@ fn create_router(app_state: Arc<AppState>) -> Result<Router> {
     let route = route
         .nest_service("/assets", ServeDir::new(format!("{}/assets", assets_path.to_str().unwrap())))
         .fallback(handle_404)
-        .with_state(app_state)
-        .layer(LiveReloadLayer::new())
-        .layer(GovernorLayer::new(general_conf)) // Apply general rate limiting to all routes
-        .layer(CompressionLayer::new())
-        .layer(TraceLayer::new(StatusInRangeAsFailures::new(400..=599).into_make_classifier()));
+        .with_state(app_state);
+    let route = if cfg!(debug_assertions) {
+        route.layer(LiveReloadLayer::new())
+    } else {
+        route
+    }
+    .layer(GovernorLayer::new(general_conf)) // Apply general rate limiting to all routes
+    .layer(CompressionLayer::new())
+    .layer(TraceLayer::new(StatusInRangeAsFailures::new(400..=599).into_make_classifier()));
 
     Ok(route)
 }

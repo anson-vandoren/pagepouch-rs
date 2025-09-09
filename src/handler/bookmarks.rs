@@ -4,7 +4,7 @@ use askama::Template;
 use axum::{
     Extension, Form,
     extract::{Query, State},
-    http::{HeaderMap, StatusCode},
+    http::StatusCode,
     response::IntoResponse,
 };
 use serde::Deserialize;
@@ -13,7 +13,7 @@ use tracing::{debug, error, warn};
 use crate::{
     ApiState,
     db::{bookmarks, users::User},
-    handler::{AuthState, HtmlTemplate, Toasts},
+    handler::{AuthState, HomeTemplate, HtmlTemplate, Toast, Toasts},
 };
 
 // Template data structures for display
@@ -195,8 +195,19 @@ pub async fn bookmark_create_handler(
     .await
     {
         Ok(_bookmark_id) => {
-            // Use HTMX redirect header to navigate back to home
-            (StatusCode::SEE_OTHER, [("HX-Redirect", "/")]).into_response()
+            // Return home page with success toast instead of redirect
+            let success_toast = Toast {
+                is_success: true,
+                message: format!("✨ Bookmark \"{}\" saved successfully!", form.title),
+            };
+
+            HtmlTemplate(HomeTemplate {
+                title: "Home",
+                auth_state: AuthState::Authenticated,
+                toasts: vec![success_toast],
+                is_error: false,
+            })
+            .into_response()
         }
         Err(err) => {
             error!("🚨 Failed to create bookmark: {}", err);

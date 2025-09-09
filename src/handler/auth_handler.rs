@@ -7,7 +7,7 @@ use axum::{
     Form,
     extract::State,
     http::StatusCode,
-    response::{IntoResponse, Redirect, Response},
+    response::{IntoResponse, Response},
 };
 use axum_extra::extract::{CookieJar, cookie::Cookie};
 use serde::Deserialize;
@@ -21,24 +21,25 @@ use crate::{
         users::check_username_password,
     },
     error::AppResult,
-    handler::{AuthState, HtmlTemplate, LoginTemplate, Toast, middlewares::check_session_cookie},
+    handler::{AuthState, HomeTemplate, HtmlTemplate, Toast, middlewares::check_session_cookie},
 };
 
 /// Serves the login page template.
 ///
-/// Redirects to home page if the user is already authenticated.
+/// Returns home page if the user is already authenticated.
 pub async fn login_page_handler(State(state): ApiState, jar: CookieJar) -> impl IntoResponse {
-    let maybe_user = check_session_cookie(&state, &jar).await;
+    let maybe_session = check_session_cookie(&state, &jar).await;
 
     // Redirect to home if already authenticated
-    if maybe_user.is_ok() {
-        return Redirect::to("/").into_response();
+    if let Ok(_session_lookup) = maybe_session {
+        return axum::response::Redirect::to("/").into_response();
     }
 
-    HtmlTemplate(LoginTemplate {
+    HtmlTemplate(crate::handler::LoginTemplate {
         title: "Login",
         auth_state: AuthState::LoginPage,
-        ..Default::default()
+        toasts: Vec::new(),
+        is_error: false,
     })
     .into_response()
 }
@@ -100,7 +101,7 @@ fn clear_session(jar: CookieJar) -> CookieJar {
 /// 2. Creates a new session in the database
 /// 3. Signs a session token with JWT
 /// 4. Sets the session cookie
-/// 5. Redirects to the home page
+/// 5. Returns the home page directly
 ///
 /// # Errors
 ///
@@ -110,19 +111,21 @@ pub async fn login_user_handler(State(state): ApiState, jar: CookieJar, Form(for
     let LoginUserSchema { username, password } = form_data;
     let user = check_username_password(&state.pool, username, password).await?;
     let mut session = make_user_session(&state.pool, &user).await?;
-    session
-        .add_message(
-            &state.pool,
-            Toast {
-                is_success: true,
-                message: "Logged in.".to_string(),
-            },
-        )
-        .await;
 
     let signed_token = state.encryption.sign_token(session.session_token())?;
 
-    Ok((set_session(jar, signed_token), Redirect::to("/")).into_response())
+    // Return home page directly instead of redirect
+    Ok((
+        set_session(jar, signed_token),
+        [("HX-Push-Url", "/")],
+        HtmlTemplate(HomeTemplate {
+            title: "Home",
+            auth_state: AuthState::Authenticated,
+            toasts: Vec::new(),
+            is_error: false,
+        }),
+    )
+        .into_response())
 }
 
 /// Handles user logout.
@@ -131,7 +134,7 @@ pub async fn login_user_handler(State(state): ApiState, jar: CookieJar, Form(for
 /// 1. Validates the session token
 /// 2. Removes the session from the database
 /// 3. Clears the session cookie
-/// 4. Redirects to the login page
+/// 4. Returns the login page directly
 ///
 /// Returns `UNAUTHORIZED` if no valid session exists.
 pub async fn logout_handler(State(state): ApiState, jar: CookieJar) -> impl IntoResponse {
@@ -149,5 +152,21 @@ pub async fn logout_handler(State(state): ApiState, jar: CookieJar) -> impl Into
         warn!(err = ?err, "Error invalidating user session, but clearing session cookie anyway.");
     }
 
-    (clear_session(jar), Redirect::to("/login")).into_response()
+    // Return login page directly instead of redirect
+    let success_toast = crate::handler::Toast {
+        is_success: true,
+        message: "👋 Logged out successfully. See you next time!".to_string(),
+    };
+
+    (
+        clear_session(jar),
+        [("HX-Push-Url", "/login")],
+        HtmlTemplate(crate::handler::LoginTemplate {
+            title: "Login",
+            auth_state: AuthState::LoginPage,
+            toasts: vec![success_toast],
+            is_error: false,
+        }),
+    )
+        .into_response()
 }

@@ -18,7 +18,7 @@ use tracing::debug;
 use crate::{
     AppState,
     handler::{
-        auth_handler::{login_page_handler, login_user_handler, logout_handler},
+        auth_handler::{login_page_handler, login_user_handler, logout_handler, session_check_handler},
         bookmarks::{bookmark_content_handler, bookmark_create_handler, bookmark_new_handler, fetch_title_handler},
         handle_404, home_handler,
         middlewares::auth_user_middleware,
@@ -88,6 +88,7 @@ fn create_router(app_state: Arc<AppState>) -> Result<Router> {
         .route("/api/fetch-title", post(fetch_title_handler))
         .route("/api/settings/theme-toggle", get(theme_toggle_handler))
         .route("/api/settings/theme", post(update_theme_handler))
+        .route("/api/session-check", get(session_check_handler))
         .layer(from_fn_with_state(app_state.clone(), auth_user_middleware))
         .route("/login", get(login_page_handler).post(login_handler))
         .route("/logout", post(logout_handler));

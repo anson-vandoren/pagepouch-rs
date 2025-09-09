@@ -42,10 +42,8 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 
 ## Next Steps
 
-- Database schema planning
 - Authentication and user management design
 - Tag management tooling design
 - Import/export logic and UI
 - Bookmark metadata extraction (title, etc.)
-- UI wireframes and color scheme planning
 - Search implementation plan

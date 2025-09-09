@@ -15,6 +15,7 @@ use axum_extra::extract::CookieJar;
 use cookie::Cookie;
 use tracing::warn;
 
+use super::auth_handler::clear_session;
 use crate::{
     ApiState, AppState,
     db::{
@@ -22,7 +23,7 @@ use crate::{
         user_session::{SessionLookup, SessionToken},
     },
     handler::{
-        Error401Template, HtmlTemplate,
+        AuthState, HtmlTemplate, LoginTemplate,
         auth_handler::{SESSION_COOKIE, set_session},
     },
 };
@@ -43,7 +44,18 @@ pub async fn auth_user_middleware(State(state): ApiState, jar: CookieJar, mut re
         Ok(user) => user,
         Err(_reason) => {
             // Redirect to login instead of returning 401
-            return (jar.remove(SESSION_COOKIE), axum::response::Redirect::to("/login")).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                [("HX-Retarget", "body"), ("HX-Push-Url", "/login")],
+                clear_session(jar),
+                HtmlTemplate(LoginTemplate {
+                    title: "Login",
+                    toasts: Vec::new(),
+                    auth_state: AuthState::LoginPage,
+                    is_error: false,
+                }),
+            )
+                .into_response();
         }
     };
 

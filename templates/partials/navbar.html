@@ -1,6 +1,6 @@
 <nav class="navbar">
   <div class="left">
-    <a hx-swap="transition:true" href="/" class="brand">
+    <a href="/" class="brand">
       <img
         src="/assets/img/favicon.svg"
         alt="Product Logo"
@@ -16,21 +16,19 @@
     <div class="right">
       <a
         class="action-link"
-        hx-swap="transition:true"
-        href="/bookmarks/new"
+        hx-get="/bookmarks/new"
+        hx-target="body"
         aria-label="Add a new link"
         >Add Link</a
       >
-      <a hx-swap="transition:true" href="/settings" aria-label="Settings"
-        >Settings</a
-      >
-      <a hx-swap="transition:true" hx-post="/logout" hx-target="body">
+      <a href="/settings" aria-label="Settings">Settings</a>
+      <a hx-post="/logout" hx-target="body">
         <img src="/assets/img/logout_icon.svg" alt="Logout Icon" class="icon" />
         Log Out
       </a>
     </div>
     {% when AuthState::Anonymous %}
-    <a hx-swap="transition:true" href="/login" class="loginlogout">
+    <a href="/login" class="loginlogout">
       <img src="/assets/img/login_icon.svg" alt="Login Icon" class="icon" />
       Log In
     </a>

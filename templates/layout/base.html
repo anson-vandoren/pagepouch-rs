@@ -25,6 +25,47 @@
     {% include "partials/footer.html" %}
   </body>
   <script>
+    // Session monitoring - activity-based session validation
+    (function () {
+      let lastActivityCheck = Date.now();
+      let checkScheduled = false;
+      const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+      async function checkSession() {
+        try {
+          const response = await fetch("/api/session-check");
+          if (response.status !== 200) {
+            console.log("Session no longer valid, redirecting to login", {
+              responseCode: response.status,
+            });
+            window.location.href = "/login";
+          }
+        } catch (e) {
+          // Network error, don't logout - could be temporary
+          console.warn("Session check failed:", e);
+        }
+        checkScheduled = false;
+        lastActivityCheck = Date.now();
+      }
+
+      // Check session on user activity if enough time has passed
+      function onActivity() {
+        if (checkScheduled || window.location.pathname === "/login") return;
+        const now = Date.now();
+        if (now - lastActivityCheck > CHECK_INTERVAL) {
+          checkScheduled = true;
+          checkSession();
+        }
+      }
+
+      // Listen for user activity
+      ["mousedown", "mousemove", "keypress", "scroll", "touchstart"].forEach(
+        (event) => {
+          document.addEventListener(event, onActivity, { passive: true });
+        },
+      );
+    })();
+
     // Theme management - run immediately to avoid flash
     (function () {
       // Check for saved theme preference or use browser preference

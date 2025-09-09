@@ -713,7 +713,7 @@ header nav {
   align-items: center;
   gap: 2rem;
   margin-bottom: 1.5rem;
-  padding: 0 0.5rem;
+  padding: 0;
 }
 
 /* Bookmark item styling */

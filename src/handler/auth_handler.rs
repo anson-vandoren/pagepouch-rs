@@ -21,7 +21,7 @@ use crate::{
         users::check_username_password,
     },
     error::AppResult,
-    handler::{AuthState, HomeTemplate, HtmlTemplate, Toast, middlewares::check_session_cookie},
+    handler::{AuthState, HomeTemplate, HtmlTemplate, middlewares::check_session_cookie},
 };
 
 /// Serves the login page template.
@@ -90,7 +90,7 @@ pub(super) fn set_session(jar: CookieJar, token: String) -> CookieJar {
 /// Removes the session cookie from the jar.
 ///
 /// Used during logout to clear the client's session.
-fn clear_session(jar: CookieJar) -> CookieJar {
+pub(super) fn clear_session(jar: CookieJar) -> CookieJar {
     jar.remove(session_cookie(String::new()))
 }
 
@@ -169,4 +169,14 @@ pub async fn logout_handler(State(state): ApiState, jar: CookieJar) -> impl Into
         }),
     )
         .into_response()
+}
+
+/// Lightweight session validation endpoint for client-side checking.
+///
+/// This endpoint is used by the JavaScript session monitor to validate
+/// that the user's session is still valid. Returns 200 if valid,
+/// 401 if expired (handled by middleware).
+pub async fn session_check_handler() -> impl IntoResponse {
+    // If we reach here, middleware has already validated the session
+    axum::http::StatusCode::OK
 }

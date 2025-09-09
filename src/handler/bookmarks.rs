@@ -261,7 +261,7 @@ async fn fetch_page_title(url: &str) -> anyhow::Result<String> {
         .query_selector("title")
         .and_then(|mut iter| iter.next())
         .and_then(|node| node.get(dom.parser()))
-        .map(|node| node.inner_text(dom.parser()).trim().to_string())
+        .map(|node| decode_html_entities(&node.inner_text(dom.parser())).trim().to_string())
         .filter(|title| !title.is_empty())
         .unwrap_or_else(|| extract_domain_from_url(url).unwrap_or_else(|| url.to_string()));
 
@@ -275,4 +275,14 @@ fn extract_domain_from_url(url: &str) -> Option<String> {
         .or_else(|| url.strip_prefix("http://"))
         .and_then(|rest| rest.split('/').next())
         .map(|domain| domain.to_string())
+}
+
+/// Decodes common HTML entities in text.
+fn decode_html_entities(text: &str) -> String {
+    text.replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&apos;", "'")
 }

@@ -90,19 +90,18 @@ fn create_router(app_state: Arc<AppState>) -> Result<Router> {
         .route("/api/settings/theme", post(update_theme_handler))
         .route("/api/session-check", get(session_check_handler))
         .layer(from_fn_with_state(app_state.clone(), auth_user_middleware))
-        .route("/login", get(login_page_handler).post(login_handler))
-        .route("/logout", post(logout_handler));
-
-    let route = route
         .nest_service("/assets", ServeDir::new(format!("{}/assets", assets_path.to_str().unwrap())))
+        .layer(GovernorLayer::new(general_conf)) // Apply general rate limiting to all routes
+        .route("/login", get(login_page_handler).post(login_handler))
+        .route("/logout", post(logout_handler))
         .fallback(handle_404)
         .with_state(app_state);
+
     let route = if cfg!(debug_assertions) {
         route.layer(LiveReloadLayer::new())
     } else {
         route
     }
-    .layer(GovernorLayer::new(general_conf)) // Apply general rate limiting to all routes
     .layer(CompressionLayer::new())
     .layer(TraceLayer::new(StatusInRangeAsFailures::new(400..=599).into_make_classifier()));
 

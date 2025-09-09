@@ -48,7 +48,7 @@ pub struct BookmarkContentTemplate {
     pub pagination: Option<Pagination>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct BookmarkQuery {
     pub q: Option<String>,   // Search query
     pub tag: Option<String>, // Filter by tag
@@ -61,6 +61,7 @@ pub async fn bookmark_content_handler(
     Extension(user): Extension<User>,
     Query(params): Query<BookmarkQuery>,
 ) -> impl IntoResponse {
+    debug!(?params, "Bookmark content handler queried");
     const DEFAULT_LIMIT: i64 = 20;
 
     let limit = DEFAULT_LIMIT;

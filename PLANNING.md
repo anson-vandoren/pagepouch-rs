@@ -47,3 +47,8 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Import/export logic and UI
 - Bookmark metadata extraction (title, etc.)
 - Search implementation plan
+
+## TODO:
+
+- When search input is selected, its outline becomes bigger than the search button
+- Pagination

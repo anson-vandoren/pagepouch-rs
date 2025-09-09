@@ -5,21 +5,18 @@
       <input
         type="text"
         id="bookmark-search"
+        name="q"
         placeholder="Search bookmarks..."
         aria-label="Search bookmarks"
         hx-get="/api/bookmarks"
         hx-trigger="keyup changed delay:300ms"
         hx-target="#bookmark-content"
-        hx-params="q"
+        hx-params="*"
       />
       <button type="button" aria-label="Search">Search</button>
     </search>
   </div>
-  <div 
-    id="bookmark-content"
-    hx-get="/api/bookmarks"
-    hx-trigger="load"
-  >
+  <div id="bookmark-content" hx-get="/api/bookmarks" hx-trigger="load">
     <div class="loading">Loading bookmarks...</div>
   </div>
 </section>

@@ -26,62 +26,29 @@
   </body>
   <script>
     // Theme management - run immediately to avoid flash
-    (function() {
+    (function () {
       // Check for saved theme preference or use browser preference
       const getCookie = (name) => {
-        const cookies = document.cookie.split(';');
+        const cookies = document.cookie.split(";");
         for (let cookie of cookies) {
-          const [key, value] = cookie.trim().split('=');
+          const [key, value] = cookie.trim().split("=");
           if (key === name) return decodeURIComponent(value);
         }
         return null;
       };
-      
-      const theme = getCookie('theme') || 'auto';
+
+      const theme = getCookie("theme") || "auto";
       const html = document.documentElement;
-      
-      if (theme === 'dark') {
-        html.classList.add('force-dark');
-        html.classList.remove('force-light');
-      } else if (theme === 'light') {
-        html.classList.add('force-light'); 
-        html.classList.remove('force-dark');
+
+      if (theme === "dark") {
+        html.classList.add("force-dark");
+        html.classList.remove("force-light");
+      } else if (theme === "light") {
+        html.classList.add("force-light");
+        html.classList.remove("force-dark");
       } else {
         // auto - remove all forced classes
-        html.classList.remove('force-dark', 'force-light');
-      }
-    })();
-
-    // Auto-reload on server restart
-    (function () {
-      // Only in dev
-      if (window.location.hostname === "localhost") {
-        const evtSource = new EventSource("/sse-reload");
-
-        let nextReconnectMsec = 500;
-
-        evtSource.onerror = () => {
-          console.log("Lost connection, waiting on the server...");
-          evtSource.close();
-
-          const tryReconnect = () => {
-            fetch("/sse-reload", { method: "HEAD" })
-              .then(() => {
-                console.log("Reconnected to dev server");
-                window.location.reload();
-              })
-              .catch(() => {
-                nextReconnectMsec *= 2;
-                console.log(
-                  `Still waiting on the server..., trying again in ${
-                    nextReconnectMsec / 1000
-                  } seconds`,
-                );
-                setTimeout(tryReconnect, nextReconnectMsec);
-              });
-          };
-          tryReconnect();
-        };
+        html.classList.remove("force-dark", "force-light");
       }
     })();
   </script>

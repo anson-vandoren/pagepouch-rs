@@ -8,6 +8,7 @@ use axum::{
     response::IntoResponse,
 };
 use serde::Deserialize;
+use tracing::{debug, error, warn};
 
 use crate::{
     ApiState,
@@ -195,12 +196,10 @@ pub async fn bookmark_create_handler(
     {
         Ok(_bookmark_id) => {
             // Use HTMX redirect header to navigate back to home
-            let mut headers = HeaderMap::new();
-            headers.insert("HX-Redirect", "/".parse().unwrap());
-            (StatusCode::OK, headers).into_response()
+            (StatusCode::SEE_OTHER, [("HX-Redirect", "/")]).into_response()
         }
         Err(err) => {
-            tracing::error!("🚨 Failed to create bookmark: {}", err);
+            error!("🚨 Failed to create bookmark: {}", err);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create bookmark").into_response()
         }
     }
@@ -209,9 +208,12 @@ pub async fn bookmark_create_handler(
 /// Handler for fetching page title from URL
 pub async fn fetch_title_handler(Form(request): Form<FetchTitleRequest>) -> impl IntoResponse {
     match fetch_page_title(&request.url).await {
-        Ok(title) => HtmlTemplate(TitleInputTemplate { title }),
+        Ok(title) => {
+            debug!(url = request.url, title, "Fetched title");
+            HtmlTemplate(TitleInputTemplate { title })
+        }
         Err(err) => {
-            tracing::warn!("🌐 Failed to fetch title for {}: {}", request.url, err);
+            warn!("🌐 Failed to fetch title for {}: {}", request.url, err);
             // Return the URL as fallback title
             let fallback_title = extract_domain_from_url(&request.url).unwrap_or_else(|| request.url.clone());
             HtmlTemplate(TitleInputTemplate { title: fallback_title })
@@ -225,9 +227,10 @@ pub async fn fetch_title_handler(Form(request): Form<FetchTitleRequest>) -> impl
 ///
 /// Returns an error if the HTTP request fails or HTML parsing fails.
 async fn fetch_page_title(url: &str) -> anyhow::Result<String> {
+    debug!(url, "Starting title fetch");
     // Create HTTP client with timeout
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(2))
         .user_agent("PagePouch/1.0")
         .build()?;
 
@@ -251,6 +254,7 @@ async fn fetch_page_title(url: &str) -> anyhow::Result<String> {
         .filter(|title| !title.is_empty())
         .unwrap_or_else(|| extract_domain_from_url(url).unwrap_or_else(|| url.to_string()));
 
+    debug!(url, title, "Finished title fetch");
     Ok(title)
 }
 

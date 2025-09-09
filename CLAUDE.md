@@ -79,7 +79,6 @@ Database operations use SQLx query! macros for compile-time checked queries with
 ### Development Features
 
 - Hot reload via bacon in debug mode
-- Server-sent events endpoint (`/sse-reload`) for development
 - Comprehensive tracing with separate formatters for app vs external crates
 - Rate limiting: 1 req/sec for login (burst 3), 2 req/sec general (burst 500)
 - Dummy data population in debug builds with realistic bookmarks and tags

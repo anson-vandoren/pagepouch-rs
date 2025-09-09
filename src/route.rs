@@ -12,7 +12,8 @@ use axum::{
 use tokio::time;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::{classify::StatusInRangeAsFailures, compression::CompressionLayer, services::ServeDir, trace::TraceLayer};
-use tracing::info;
+use tower_livereload::LiveReloadLayer;
+use tracing::debug;
 
 use crate::{
     AppState,
@@ -69,7 +70,7 @@ fn create_router(app_state: Arc<AppState>) -> Result<Router> {
             interval.tick().await;
             let login_len = login_limiter.len();
             let general_len = general_limiter.len();
-            info!(login_len, general_len, "Login rate limiter cleanup");
+            debug!(login_len, general_len, "Login rate limiter cleanup");
             login_limiter.retain_recent();
             general_limiter.retain_recent();
         }
@@ -90,38 +91,17 @@ fn create_router(app_state: Arc<AppState>) -> Result<Router> {
         .layer(from_fn_with_state(app_state.clone(), auth_user_middleware))
         .route("/login", get(login_page_handler).post(login_handler))
         .route("/logout", post(logout_handler));
-    let route = if cfg!(debug_assertions) {
-        route.route("/sse-reload", get(dev_mode::sse_reload))
-    } else {
-        route
-    };
+
     let route = route
         .nest_service("/assets", ServeDir::new(format!("{}/assets", assets_path.to_str().unwrap())))
         .fallback(handle_404)
         .with_state(app_state)
+        .layer(LiveReloadLayer::new())
         .layer(GovernorLayer::new(general_conf)) // Apply general rate limiting to all routes
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new(StatusInRangeAsFailures::new(400..=599).into_make_classifier()));
 
     Ok(route)
-}
-
-#[cfg(debug_assertions)]
-mod dev_mode {
-    use std::convert::Infallible;
-
-    use axum::response::{Sse, sse::Event};
-    use futures::{Stream, stream};
-    use tokio_stream::StreamExt as _;
-
-    /// Server-sent events endpoint for development hot reload.
-    ///
-    /// Sends heartbeat events every second to keep the connection alive
-    /// and allow the client to detect when the server restarts.
-    pub async fn sse_reload() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-        let stream = stream::repeat_with(|| Ok(Event::default().data("heartbeat"))).throttle(std::time::Duration::from_secs(1));
-        Sse::new(stream)
-    }
 }
 
 fn init_tracing() -> anyhow::Result<()> {

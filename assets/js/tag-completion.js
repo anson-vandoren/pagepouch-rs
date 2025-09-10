@@ -31,6 +31,7 @@ class TagCompletion {
   init() {
     /** @type {HTMLInputElement} */
     this.searchInput = document.getElementById('bookmark-search');
+    /** @type {HTMLDivElement} */
     this.suggestionsDiv = document.getElementById('tag-suggestions');
     this.suggestionsList = document.getElementById('tag-suggestions-list');
 
@@ -505,6 +506,20 @@ class TagCompletion {
    */
   updateSuggestionSelection() {
     const items = document.querySelectorAll('.tag-suggestion-item');
+    if (this.selectedSuggestionIndex < 0 || this.selectedSuggestionIndex >= items.length) {
+      // Nothing to highlight as "selected"
+      return;
+    }
+
+    // Try to scroll the container such that the selected item is in the middle
+    const selectedItem = items[this.selectedSuggestionIndex];
+    const top =
+      selectedItem.offsetTop - this.suggestionsDiv.clientHeight / 2 + selectedItem.offsetHeight / 2;
+    this.suggestionsDiv.scroll({
+      top,
+      behavior: 'smooth',
+      left: 0,
+    });
 
     items.forEach((item, index) => {
       if (index === this.selectedSuggestionIndex) {

@@ -1307,19 +1307,6 @@ search button:active {
   overflow-y: auto;
 }
 
-.tag-suggestions-header {
-  padding: 0.5rem 0.75rem 0.25rem;
-  border-bottom: 1px solid var(--bg2);
-}
-
-.tag-suggestions-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--fg3);
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
 .tag-suggestions-list {
   padding: 0.25rem 0;
 }
@@ -1349,9 +1336,15 @@ search button:active {
 }
 
 @keyframes tag-error-pulse {
-  0% { box-shadow: 0 0 0 0.2rem rgba(251, 73, 52, 0.25) !important; }
-  50% { box-shadow: 0 0 0 0.4rem rgba(251, 73, 52, 0.15) !important; }
-  100% { box-shadow: 0 0 0 0.2rem rgba(251, 73, 52, 0.25) !important; }
+  0% {
+    box-shadow: 0 0 0 0.2rem rgba(251, 73, 52, 0.25) !important;
+  }
+  50% {
+    box-shadow: 0 0 0 0.4rem rgba(251, 73, 52, 0.15) !important;
+  }
+  100% {
+    box-shadow: 0 0 0 0.2rem rgba(251, 73, 52, 0.25) !important;
+  }
 }
 
 @media (max-width: 600px) {
@@ -1365,7 +1358,7 @@ search button:active {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .tag-pills-container {
     justify-content: flex-start;
   }

@@ -267,7 +267,13 @@ class TagCompletion {
         return true;
 
       case 'Tab':
-        return this.handleTabNavigation(event);
+        event.preventDefault();
+        if (!event.shiftKey) {
+          this.navigateDown();
+        } else {
+          this.navigateUp();
+        }
+        return true;
 
       case 'Enter':
         return this.handleEnterKey(event);
@@ -317,41 +323,10 @@ class TagCompletion {
    */
   handleTabNavigation(event) {
     if (!event.shiftKey) {
-      // Tab forward
-      if (this.selectedSuggestionIndex < 0) {
-        // First tab selects first item
-        event.preventDefault();
-        this.selectedSuggestionIndex = 0;
-        this.updateSuggestionSelection();
-        this.updateTagTextFromSelection();
-        return true;
-      } else if (this.selectedSuggestionIndex < this.tagSuggestions.length - 1) {
-        // Navigate to next item
-        event.preventDefault();
-        this.selectedSuggestionIndex++;
-        this.updateSuggestionSelection();
-        this.updateTagTextFromSelection();
-        return true;
-      }
-      // At end, let normal tab behavior continue
+      this.navigateDown();
     } else {
-      // Shift+Tab backward
-      if (this.selectedSuggestionIndex > 0) {
-        event.preventDefault();
-        this.selectedSuggestionIndex--;
-        this.updateSuggestionSelection();
-        this.updateTagTextFromSelection();
-        return true;
-      } else if (this.selectedSuggestionIndex === 0) {
-        // At beginning, deselect and hide
-        event.preventDefault();
-        this.selectedSuggestionIndex = -1;
-        this.updateSuggestionSelection();
-        this.hideDropdown();
-        return false; // Let normal tab behavior take over
-      }
+      this.navigateUp();
     }
-    return false;
   }
 
   /**

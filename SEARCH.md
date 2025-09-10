@@ -199,4 +199,5 @@ For each of these bugs, create one or more test case(s), verify failing, fix, ve
 - Removing via clear-all button a hyphenated tag leaves the second part of the hyphen term in the search box
 
 - Tag suggestion list should scroll when tabbed
-- Tabbing at the bottom entry tabs to the search button instead of wrapping
+- Shift-tabbing back up the list changes the input which triggers a re-search which narrows the list to one
+- `<Esc>` the second time does not close the suggestion dropdown

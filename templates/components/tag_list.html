@@ -1,10 +1,12 @@
-<div id="active-tags" class="tag-list"></div>
-<div id="inactive-tags" class="tag-list">
+<div id="active-tags" class="tag-list" aria-label="Active tag filters"></div>
+<div id="inactive-tags" class="tag-list" aria-label="Available tags">
   {% for tag in tags %}
-    <span
-      class="tag-list-item"
-      onclick="document.dispatchEvent(new CustomEvent('commitTag', { detail: { tag: '{{ tag.name }}' } }))"
-      >{{ tag.name }}</span
-    >
+    <span 
+      class="tag-list-item" 
+      role="button"
+      tabindex="0"
+      aria-pressed="false"
+      title="Add {{ tag.name }} filter"
+    >{{ tag.name }}</span>
   {% endfor %}
 </div>

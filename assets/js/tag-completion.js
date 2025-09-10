@@ -15,9 +15,15 @@ class TagCompletion {
     this.currentTagPosition = -1;
     this.tagSuggestions = [];
     this.selectedSuggestionIndex = -1;
+
+    // Cached DOM elements
     this.searchInput = null;
     this.suggestionsDiv = null;
     this.suggestionsList = null;
+    this.tagColumn = null;
+    this.activeTagsContainer = null;
+    this.inactiveTagsContainer = null;
+
     /**
      * Whether the tag suggestions dropdown has been explicitly hidden by the user via <Esc> press
      */
@@ -25,18 +31,66 @@ class TagCompletion {
     this.debounceTimeout = null;
     this.searchTimeout = null;
     this.committedTags = new Set(); // Track committed tags separately
+
+    // Prevent race conditions with operation locks
+    this.isUpdatingTags = false;
   }
 
   init() {
-    /** @type {HTMLInputElement} */
+    // Cache all DOM elements upfront for better performance
     this.searchInput = document.getElementById('bookmark-search');
-    /** @type {HTMLDivElement} */
     this.suggestionsDiv = document.getElementById('tag-suggestions');
     this.suggestionsList = document.getElementById('tag-suggestions-list');
+    this.tagColumn = document.getElementById('tag-column');
+    this.activeTagsContainer = document.getElementById('active-tags');
+    this.inactiveTagsContainer = document.getElementById('inactive-tags');
 
     if (!this.searchInput) return;
 
     this.bindEvents();
+    this.setupTagColumnEventDelegation();
+  }
+
+  /**
+   * Set up event delegation for tag column to handle clicks and keyboard interactions
+   * This approach is more performant, prevents memory leaks, and supports accessibility
+   */
+  setupTagColumnEventDelegation() {
+    if (!this.tagColumn) return;
+
+    // Handle click events
+    this.tagColumn.addEventListener('click', (e) => {
+      if (e.target.classList.contains('tag-list-item')) {
+        e.preventDefault();
+        this.toggleTagState(e.target);
+      }
+    });
+
+    // Handle keyboard events for accessibility
+    this.tagColumn.addEventListener('keydown', (e) => {
+      if (e.target.classList.contains('tag-list-item')) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.toggleTagState(e.target);
+        }
+      }
+    });
+  }
+
+  /**
+   * Toggle a tag between active and inactive states
+   * @param {HTMLElement} tagElement - The tag element to toggle
+   */
+  toggleTagState(tagElement) {
+    const tagName = tagElement.textContent.trim();
+
+    if (tagElement.classList.contains('tag-list-active')) {
+      // Active tag clicked - remove it
+      this.removeCommittedTag(tagName);
+    } else {
+      // Inactive tag clicked - add it
+      this.addCommittedTag(tagName);
+    }
   }
 
   bindEvents() {
@@ -547,80 +601,125 @@ class TagCompletion {
 
   /**
    * Remove a specific committed tag (called when clicking on an active filter tag)
+   * @param {string} tagToRemove - Name of the tag to remove from filters
    */
   removeCommittedTag(tagToRemove) {
-    this.committedTags.delete(tagToRemove);
-    this.triggerSearchWithCommittedTags();
-    this.deactivateTag(tagToRemove);
+    if (this.isUpdatingTags || !this.committedTags.has(tagToRemove)) return;
+
+    this.isUpdatingTags = true;
+    try {
+      this.committedTags.delete(tagToRemove);
+      this.moveTagToInactive(tagToRemove);
+      this.triggerSearchWithCommittedTags();
+    } finally {
+      this.isUpdatingTags = false;
+    }
   }
 
   /**
    * Clear all committed tags (called when clicking on Tags or Bookmarks header)
    */
   clearAllCommittedTags() {
-    this.committedTags.forEach((tag) => this.deactivateTag(tag));
-    this.committedTags.clear();
-    this.triggerSearchWithCommittedTags();
+    if (this.isUpdatingTags || this.committedTags.size === 0) return;
+
+    this.isUpdatingTags = true;
+    try {
+      const tagsToDeactivate = Array.from(this.committedTags);
+      this.committedTags.clear();
+      tagsToDeactivate.forEach((tag) => this.moveTagToInactive(tag));
+      this.triggerSearchWithCommittedTags();
+    } finally {
+      this.isUpdatingTags = false;
+    }
   }
 
   /**
-   * Add a (presumably) valid tag and trigger a search. Called via handler
-   * when clicking on an existing tag from a bookmark item or the tag column
+   * Add a tag to the committed filters and move it to the active section
+   * @param {string} tagName - Name of the tag to add to filters
    */
   addCommittedTag(tagName) {
-    this.committedTags.add(tagName);
-    this.activateTag(tagName);
-    this.triggerSearchWithCommittedTags();
+    if (this.isUpdatingTags || this.committedTags.has(tagName)) return;
+
+    this.isUpdatingTags = true;
+    try {
+      this.committedTags.add(tagName);
+      this.moveTagToActive(tagName);
+      this.triggerSearchWithCommittedTags();
+    } finally {
+      this.isUpdatingTags = false;
+    }
   }
 
-  activateTag(tagName) {
-    const tagListContainer = document.getElementById('tag-column');
-    if (!tagListContainer) return;
+  ensureTagsContainers() {
+    let isOk = true;
+    if (!this.inactiveTagsContainer) {
+      this.inactiveTagsContainer = document.getElementById('inactive-tags');
+      if (!this.inactiveTagsContainer) {
+        console.error('Inactive tags container not found');
+        isOk = false;
+      }
+    }
+    if (!this.activeTagsContainer) {
+      this.activeTagsContainer = document.getElementById('active-tags');
+      if (!this.activeTagsContainer) {
+        console.error('Active tags container not found');
+        isOk = false;
+      }
+    }
 
-    // Find the tag element from id=inactive-tags
-    let tagElem = Array.from(
-      document.getElementById('inactive-tags').querySelectorAll(`.tag-list-item`)
-    ).find((el) => el.textContent.trim() === tagName);
-    // If not present, return
+    return isOk;
+  }
+
+  /**
+   * Move a tag from inactive to active section, applying filter styling
+   * @param {string} tagName - Name of the tag to move to active section
+   */
+  moveTagToActive(tagName) {
+    if (!this.ensureTagsContainers()) return;
+
+    // Find the tag element in inactive section
+    const tagElem = Array.from(this.inactiveTagsContainer.querySelectorAll('.tag-list-item')).find(
+      (el) => el.textContent.trim() === tagName
+    );
+
     if (!tagElem) return;
 
-    // Add active tag styling
+    // Apply active styling and move to active section
     tagElem.classList.add('tag-list-active');
-    // set onclick to dispatch remove
-    tagElem.onclick = () => {
-      document.dispatchEvent(new CustomEvent('removeCommittedTag', { detail: { tag: tagName } }));
-    };
-    // Append in order when activating. Append will also remove it from its current inactive position
-    document.getElementById('active-tags').appendChild(tagElem);
+    tagElem.setAttribute('aria-pressed', 'true');
+    tagElem.title = `Remove ${tagName} filter`;
+
+    this.activeTagsContainer.appendChild(tagElem);
   }
 
-  deactivateTag(tagName) {
-    const tagListContainer = document.getElementById('tag-column');
-    if (!tagListContainer) return;
+  /**
+   * Move a tag from active to inactive section, removing filter styling and maintaining alphabetical order
+   * @param {string} tagName - Name of the tag to move to inactive section
+   */
+  moveTagToInactive(tagName) {
+    if (!this.ensureTagsContainers()) return;
 
-    // Try to find the active tag element
-    let tagElem = Array.from(
-      document.getElementById('active-tags').querySelectorAll(`.tag-list-item`)
-    ).find((el) => el.textContent.trim() === tagName);
-    // If not present, return
+    // Find the tag element in active section
+    const tagElem = Array.from(this.activeTagsContainer.querySelectorAll('.tag-list-item')).find(
+      (el) => el.textContent.trim() === tagName
+    );
+
     if (!tagElem) return;
 
-    // Remove styling
+    // Remove active styling and attributes
     tagElem.classList.remove('tag-list-active');
+    tagElem.setAttribute('aria-pressed', 'false');
+    tagElem.title = `Add ${tagName} filter`;
 
-    // Set onclick to dispatch commit
-    tagElem.onclick = () => {
-      document.dispatchEvent(new CustomEvent('commitTag', { detail: { tag: tagName } }));
-    };
-
-    // Put it back in the correct alphabetical spot
+    // Insert back into inactive section in alphabetical order
     const nextHighestNode = Array.from(
-      document.getElementById('inactive-tags').querySelectorAll(`.tag-list-item`)
+      this.inactiveTagsContainer.querySelectorAll('.tag-list-item')
     ).find((el) => el.textContent.trim() > tagName);
+
     if (nextHighestNode) {
-      document.getElementById('inactive-tags').insertBefore(tagElem, nextHighestNode);
+      this.inactiveTagsContainer.insertBefore(tagElem, nextHighestNode);
     } else {
-      document.getElementById('inactive-tags').appendChild(tagElem);
+      this.inactiveTagsContainer.appendChild(tagElem);
     }
   }
 }

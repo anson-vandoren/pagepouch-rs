@@ -199,4 +199,3 @@ For each of these bugs, create one or more test case(s), verify failing, fix, ve
 
 - Suggested tags should filter out tags already active in the filter
 - Suggested tags should filter out tags that aren't a match for current results (BUT ONLY if we're looking at all possible, not paginated partial)
-- Adding a tag from suggestions doesn't visually add

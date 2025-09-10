@@ -139,7 +139,8 @@ class TagCompletion {
 
     this.searchInput.addEventListener('blur', (event) => {
       // Won't get an Esc key event if the search input is selected, so key on blur instead
-      this.handleEscapeKey(event);
+      // Small delay to let click events on suggestions fire first
+      setTimeout(() => this.handleEscapeKey(event), 100);
     });
 
     this.searchInput.addEventListener('click', (event) => {

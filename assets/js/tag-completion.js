@@ -23,6 +23,7 @@ class TagCompletion {
     this.tagColumn = null;
     this.activeTagsContainer = null;
     this.inactiveTagsContainer = null;
+    this.bookmarkContent = null;
 
     /**
      * Whether the tag suggestions dropdown has been explicitly hidden by the user via <Esc> press
@@ -44,11 +45,13 @@ class TagCompletion {
     this.tagColumn = document.getElementById('tag-column');
     this.activeTagsContainer = document.getElementById('active-tags');
     this.inactiveTagsContainer = document.getElementById('inactive-tags');
+    this.bookmarkContent = document.getElementById('bookmark-content');
 
     if (!this.searchInput) return;
 
     this.bindEvents();
     this.setupTagColumnEventDelegation();
+    this.setupBookmarkTagsEventDelegation();
   }
 
   /**
@@ -72,6 +75,34 @@ class TagCompletion {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           this.toggleTagState(e.target);
+        }
+      }
+    });
+  }
+
+  /**
+   * Set up event delegation for bookmark item tags to handle clicks and keyboard interactions
+   * This handles tags within bookmark items using the same consistent approach
+   */
+  setupBookmarkTagsEventDelegation() {
+    if (!this.bookmarkContent) return;
+
+    // Handle click events on bookmark tags
+    this.bookmarkContent.addEventListener('click', (e) => {
+      if (e.target.classList.contains('tag')) {
+        e.preventDefault();
+        const tagName = e.target.textContent.trim();
+        this.addCommittedTag(tagName);
+      }
+    });
+
+    // Handle keyboard events for bookmark tags accessibility
+    this.bookmarkContent.addEventListener('keydown', (e) => {
+      if (e.target.classList.contains('tag')) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          const tagName = e.target.textContent.trim();
+          this.addCommittedTag(tagName);
         }
       }
     });
@@ -130,17 +161,9 @@ class TagCompletion {
       }
     });
 
-    // Listen for active tag filter removal events
-    document.addEventListener('removeCommittedTag', (event) => {
-      this.removeCommittedTag(event.detail.tag);
-    });
-
+    // Listen for header clicks to clear all committed tags
     document.addEventListener('clearAllCommittedTags', (event) => {
       this.clearAllCommittedTags();
-    });
-
-    document.addEventListener('commitTag', (event) => {
-      this.addCommittedTag(event.detail.tag);
     });
   }
 

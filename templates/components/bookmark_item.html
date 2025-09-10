@@ -8,7 +8,9 @@
     {% for tag in bookmark.tags %}
       <span
         class="tag"
-        onclick="document.dispatchEvent(new CustomEvent('commitTag', { detail: { tag: '{{ tag.name }}' } }))"
+        role="button"
+        tabindex="0"
+        title="Filter by {{ tag.name }}"
         >{{ tag.name }}</span
       >
     {% endfor %}

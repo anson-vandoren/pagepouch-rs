@@ -6,7 +6,9 @@
   </h3>
   <div class="bookmark-tags">
     {% for tag in bookmark.tags %}
-      <span class="tag" onclick="addTagToSearch('{{ tag.name }}')">{{ tag.name }}</span>
+      <span class="tag" onclick="document.addValidTag('{{ tag.name }}')"
+        >{{ tag.name }}</span
+      >
     {% endfor %}
   </div>
   <div class="bookmark-meta">

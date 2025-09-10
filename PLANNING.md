@@ -70,3 +70,4 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Search box auto-selected on page load
 - Limit the number of suggestions returned to ~10 or so, ranked.
 - Login page is too skinny
+- Minify CSS and JS for prod

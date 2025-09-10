@@ -19,13 +19,17 @@ class TagCompletion {
     this.searchInput = null;
     this.suggestionsDiv = null;
     this.suggestionsList = null;
-    this.isDropdownHidden = false;
+    /**
+     * Whether the tag suggestions dropdown has been explicitly hidden by the user via <Esc> press
+     */
+    this.isDropdownCanceled = false;
     this.debounceTimeout = null;
     this.searchTimeout = null;
     this.committedTags = new Set(); // Track committed tags separately
   }
 
   init() {
+    /** @type {HTMLInputElement} */
     this.searchInput = document.getElementById('bookmark-search');
     this.suggestionsDiv = document.getElementById('tag-suggestions');
     this.suggestionsList = document.getElementById('tag-suggestions-list');
@@ -75,6 +79,10 @@ class TagCompletion {
     document.addEventListener('clearAllCommittedTags', (event) => {
       this.clearAllCommittedTags();
     });
+
+    document.addEventListener('commitTag', (event) => {
+      this.addTag(event.detail.tag);
+    });
   }
 
   debouncedHandleTagInput() {
@@ -95,7 +103,7 @@ class TagCompletion {
     const cursorPos = this.searchInput.selectionStart || 0;
     const tagInfo = this.extractCurrentTag(cursorPos);
 
-    if (tagInfo && !this.isDropdownHidden) {
+    if (tagInfo && !this.isDropdownCanceled) {
       await this.showTagSuggestions(tagInfo);
     } else {
       this.hideDropdown();
@@ -105,12 +113,17 @@ class TagCompletion {
   /**
    * Extract current tag being typed from cursor position
    * Returns null if not in tag context
+   *
+   * @returns {TagInfo|null}
    */
   extractCurrentTag(cursorPos) {
     const text = this.searchInput.value;
 
     // Find the last # before cursor position
     let tagStart = -1;
+    // Check backwards from current cursor position. We are in a tag context
+    // iff we find a `#` that is at the start or after a space, and there are
+    // no spaces between `cursorPos` and that `#`
     for (let i = cursorPos - 1; i >= 0; i--) {
       if (text[i] === '#') {
         // Check if this # is at start or after space (valid tag start)
@@ -144,7 +157,6 @@ class TagCompletion {
       text: tagText,
       start: tagStart,
       end: tagEnd,
-      fullTag: text.substring(tagStart, tagEnd),
     };
   }
 
@@ -165,6 +177,7 @@ class TagCompletion {
 
   /**
    * Show tag suggestions dropdown
+   * @param {TagInfo} tagInfo
    */
   async showTagSuggestions(tagInfo) {
     this.currentTagInput = tagInfo.text;
@@ -215,7 +228,7 @@ class TagCompletion {
     this.suggestionsDiv.style.left = '0';
     this.suggestionsDiv.style.width = '100%';
     this.suggestionsDiv.style.display = 'block';
-    this.isDropdownHidden = false;
+    this.isDropdownCanceled = false;
   }
 
   /**
@@ -224,7 +237,7 @@ class TagCompletion {
   hideDropdown() {
     this.suggestionsDiv.style.display = 'none';
     this.selectedSuggestionIndex = -1;
-    this.isDropdownHidden = false; // Reset for next tag
+    this.isDropdownCanceled = false; // Reset for next tag
   }
 
   /**
@@ -368,7 +381,7 @@ class TagCompletion {
     } else {
       // Second escape hides dropdown
       this.hideDropdown();
-      this.isDropdownHidden = true; // Prevent re-showing until new # typed
+      this.isDropdownCanceled = true; // Prevent re-showing until new # typed
     }
     return true;
   }
@@ -536,10 +549,19 @@ class TagCompletion {
   }
 
   /**
-   * Clear all committed tags (called from tag pill events)  
+   * Clear all committed tags (called from tag pill events)
    */
   clearAllCommittedTags() {
     this.committedTags.clear();
+    this.triggerSearchWithCommittedTags();
+  }
+
+  /**
+   * Add a (presumably) valid tag and trigger a search. Called via handler
+   * when clicking on an existing tag from a bookmark item or the tag column
+   */
+  addTag(tagName) {
+    this.committedTags.add(tagName);
     this.triggerSearchWithCommittedTags();
   }
 }
@@ -549,3 +571,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const tagCompletion = new TagCompletion();
   tagCompletion.init();
 });
+
+/** @typedef {{text: string, start: number, end: number}} TagInfo */
+
+document.addValidTag = function (tagName) {
+  document.dispatchEvent(new CustomEvent('commitTag', { detail: { tag: tagName } }));
+};

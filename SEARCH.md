@@ -195,7 +195,6 @@ For each of these bugs, create one or more test case(s), verify failing, fix, ve
   `api and web-` finds links that have tags `api` AND `web-dev`, but not links that have `api` AND `web-framework`,
   which is perplexing and incorrect. Even more confusingly, `rust and web-` correctly finds both cases :thinking:.
   This is still broken even with `test_partial_tag_search_bug`.
-- Maybe it's not supposed to be done yet, but adding a tag to the filter pill section does not remove it from the search input bar
 - Search terms inside of quotes (single or double) should only match exactly, not fuzzy-matching
 - Removing via clear-all button a hyphenated tag leaves the second part of the hyphen term in the search box
 

@@ -34,7 +34,6 @@
   <script>
     function removeTagFilter(tagToRemove) {
       // Dispatch event to TagCompletion to handle removal
-      console.log("Removing tag filter:", tagToRemove);
       document.dispatchEvent(
         new CustomEvent("removeCommittedTag", {
           detail: { tag: tagToRemove },
@@ -44,7 +43,6 @@
 
     function clearAllTagFilters() {
       // Dispatch event to TagCompletion to handle clearing all tags
-      console.log("Clearing all tag filters");
       document.dispatchEvent(new CustomEvent("clearAllCommittedTags"));
     }
   </script>

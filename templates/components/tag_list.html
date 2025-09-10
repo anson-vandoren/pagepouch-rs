@@ -1,8 +1,6 @@
 <div class="tag-cloud">
   {% for tag in tags %}
-    <span
-      class="tag-cloud-item"
-      onclick="addTagToSearch('{{ tag.name }}')"
+    <span class="tag-cloud-item" onclick="addValidTag('{{ tag.name }}')"
       >{{ tag.name }}</span
     >
   {% endfor %}

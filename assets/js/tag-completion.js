@@ -12,7 +12,6 @@
 
 class TagCompletion {
   constructor() {
-    this.currentTagInput = '';
     this.currentTagPosition = -1;
     this.tagSuggestions = [];
     this.selectedSuggestionIndex = -1;
@@ -61,6 +60,11 @@ class TagCompletion {
       }
     });
 
+    this.searchInput.addEventListener('blur', (event) => {
+      // Won't get an Esc key event if the search input is selected, so key on blur instead
+      this.handleEscapeKey(event);
+    });
+
     this.searchInput.addEventListener('click', (event) => {
       this.debouncedHandleTagInput();
     });
@@ -103,6 +107,11 @@ class TagCompletion {
   async handleTagInput() {
     const cursorPos = this.searchInput.selectionStart || 0;
     const tagInfo = this.extractCurrentTag(cursorPos);
+
+    // If we went outside a tag context, let the dropdown show again when we're back in
+    if (!tagInfo) {
+      this.isDropdownCanceled = false;
+    }
 
     if (tagInfo && !this.isDropdownCanceled) {
       await this.showTagSuggestions(tagInfo);
@@ -181,7 +190,6 @@ class TagCompletion {
    * @param {TagInfo} tagInfo
    */
   async showTagSuggestions(tagInfo) {
-    this.currentTagInput = tagInfo.text;
     this.currentTagPosition = tagInfo.start;
 
     this.tagSuggestions = await this.fetchTagSuggestions(tagInfo.text);
@@ -238,7 +246,8 @@ class TagCompletion {
   hideDropdown() {
     this.suggestionsDiv.style.display = 'none';
     this.selectedSuggestionIndex = -1;
-    this.isDropdownCanceled = false; // Reset for next tag
+    // Reset suggestions
+    this.tagSuggestions.length = 0;
   }
 
   /**
@@ -251,42 +260,44 @@ class TagCompletion {
   /**
    * Handle keyboard navigation in dropdown
    */
-  handleKeyNavigation(event) {
-    if (this.suggestionsDiv.style.display === 'none') {
-      return false;
-    }
+  async handleKeyNavigation(event) {
+    const hasDropdown = this.suggestionsDiv.style.display !== 'none';
 
     switch (event.key) {
       case 'ArrowDown':
-        event.preventDefault();
-        this.navigateDown();
-        return true;
-
+        if (hasDropdown) {
+          event.preventDefault();
+          this.navigateDown();
+        }
+        break;
       case 'ArrowUp':
-        event.preventDefault();
-        this.navigateUp();
-        return true;
-
+        if (hasDropdown) {
+          event.preventDefault();
+          this.navigateUp();
+        }
+        break;
       case 'Tab':
+        if (!hasDropdown) {
+          this.isDropdownCanceled = false;
+          this.showDropdown();
+        }
         event.preventDefault();
         if (!event.shiftKey) {
           this.navigateDown();
         } else {
           this.navigateUp();
         }
-        return true;
-
+        break;
       case 'Enter':
-        return this.handleEnterKey(event);
-
+        await this.handleEnterKey(event);
+        break;
       case 'Escape':
-        return this.handleEscapeKey(event);
-
+        console.warn('Unexpectedly got Esc keypress inside search input listener.');
+        break;
       case ' ':
-        return this.handleSpaceKey(event);
+        this.handleSpaceKey(event);
+        break;
     }
-
-    return false;
   }
 
   /**
@@ -333,55 +344,64 @@ class TagCompletion {
   /**
    * Handle Enter key - commit selected tag
    */
-  handleEnterKey(event) {
+  async handleEnterKey(event) {
     if (this.selectedSuggestionIndex >= 0) {
       event.preventDefault();
       const selectedTag = this.tagSuggestions[this.selectedSuggestionIndex];
       this.commitTagSuggestion(selectedTag.name);
-      return true;
+    } else {
+      // What we have may still be a valid tag which we should commit
+      await this.commitIfValidTag(event);
     }
-    return false;
   }
 
   /**
    * Handle Escape key - unselect or hide
    */
-  handleEscapeKey(event) {
-    event.preventDefault();
+  handleEscapeKey(_event) {
+    const hasSelection = this.selectedSuggestionIndex >= 0;
+    const isDropdownOpen = this.suggestionsDiv.style.display !== 'none';
 
-    if (this.selectedSuggestionIndex >= 0) {
+    if (hasSelection) {
       // First escape unselects
       this.selectedSuggestionIndex = -1;
       this.updateSuggestionSelection();
-      this.restoreOriginalTagText();
-    } else {
+    } else if (isDropdownOpen) {
       // Second escape hides dropdown
       this.hideDropdown();
       this.isDropdownCanceled = true; // Prevent re-showing until new # typed
+    } else {
+      // Nothing to do if we don't have a selection and the dropdown isn't open, so avoid preventing blur/refocusing
+      return;
     }
-    return true;
+    this.searchInput.focus();
   }
 
   /**
    * Handle Space key - commit if exact match exists
    */
   handleSpaceKey(event) {
+    this.commitIfValidTag(event);
+  }
+
+  async commitIfValidTag(event) {
     const cursorPos = this.searchInput.selectionStart || 0;
     const tagInfo = this.extractCurrentTag(cursorPos);
 
-    if (!tagInfo) return false;
+    if (!tagInfo) return;
 
     // Check if current tag text matches any suggestion exactly
+    if (this.tagSuggestions.length === 0) {
+      this.tagSuggestions = await this.fetchTagSuggestions(tagInfo.text);
+    }
     const exactMatch = this.tagSuggestions.find((s) => s.name === tagInfo.text);
 
     if (exactMatch) {
       event.preventDefault();
       this.commitTagSuggestion(exactMatch.name);
-      return true;
     } else {
       // Invalid tag - show error styling
       this.showTagError(tagInfo);
-      return false;
     }
   }
 
@@ -391,15 +411,10 @@ class TagCompletion {
   updateTagTextFromSelection() {
     if (this.selectedSuggestionIndex >= 0) {
       const selectedTag = this.tagSuggestions[this.selectedSuggestionIndex];
-      this.replaceCurrentTagText(selectedTag.name);
+      if (selectedTag) {
+        this.replaceCurrentTagText(selectedTag.name);
+      }
     }
-  }
-
-  /**
-   * Restore original tag text after escape
-   */
-  restoreOriginalTagText() {
-    this.replaceCurrentTagText(this.currentTagInput);
   }
 
   /**
@@ -507,7 +522,7 @@ class TagCompletion {
   updateSuggestionSelection() {
     const items = document.querySelectorAll('.tag-suggestion-item');
     if (this.selectedSuggestionIndex < 0 || this.selectedSuggestionIndex >= items.length) {
-      // Nothing to highlight as "selected"
+      items.forEach((item) => item.classList.remove('selected'));
       return;
     }
 

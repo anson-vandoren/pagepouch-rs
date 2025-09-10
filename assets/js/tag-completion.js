@@ -76,7 +76,7 @@ class TagCompletion {
       }
     });
 
-    // Listen for tag pill removal events
+    // Listen for active tag filter removal events
     document.addEventListener('removeCommittedTag', (event) => {
       this.removeCommittedTag(event.detail.tag);
     });
@@ -86,7 +86,7 @@ class TagCompletion {
     });
 
     document.addEventListener('commitTag', (event) => {
-      this.addTag(event.detail.tag);
+      this.addCommittedTag(event.detail.tag);
     });
   }
 
@@ -546,17 +546,19 @@ class TagCompletion {
   }
 
   /**
-   * Remove a specific committed tag (called from tag pill events)
+   * Remove a specific committed tag (called when clicking on an active filter tag)
    */
   removeCommittedTag(tagToRemove) {
     this.committedTags.delete(tagToRemove);
     this.triggerSearchWithCommittedTags();
+    this.deactivateTag(tagToRemove);
   }
 
   /**
-   * Clear all committed tags (called from tag pill events)
+   * Clear all committed tags (called when clicking on Tags or Bookmarks header)
    */
   clearAllCommittedTags() {
+    this.committedTags.forEach((tag) => this.deactivateTag(tag));
     this.committedTags.clear();
     this.triggerSearchWithCommittedTags();
   }
@@ -565,9 +567,61 @@ class TagCompletion {
    * Add a (presumably) valid tag and trigger a search. Called via handler
    * when clicking on an existing tag from a bookmark item or the tag column
    */
-  addTag(tagName) {
+  addCommittedTag(tagName) {
     this.committedTags.add(tagName);
+    this.activateTag(tagName);
     this.triggerSearchWithCommittedTags();
+  }
+
+  activateTag(tagName) {
+    const tagListContainer = document.getElementById('tag-column');
+    if (!tagListContainer) return;
+
+    // Find the tag element from id=inactive-tags
+    let tagElem = Array.from(
+      document.getElementById('inactive-tags').querySelectorAll(`.tag-list-item`)
+    ).find((el) => el.textContent.trim() === tagName);
+    // If not present, return
+    if (!tagElem) return;
+
+    // Add active tag styling
+    tagElem.classList.add('tag-list-active');
+    // set onclick to dispatch remove
+    tagElem.onclick = () => {
+      document.dispatchEvent(new CustomEvent('removeCommittedTag', { detail: { tag: tagName } }));
+    };
+    // Append in order when activating. Append will also remove it from its current inactive position
+    document.getElementById('active-tags').appendChild(tagElem);
+  }
+
+  deactivateTag(tagName) {
+    const tagListContainer = document.getElementById('tag-column');
+    if (!tagListContainer) return;
+
+    // Try to find the active tag element
+    let tagElem = Array.from(
+      document.getElementById('active-tags').querySelectorAll(`.tag-list-item`)
+    ).find((el) => el.textContent.trim() === tagName);
+    // If not present, return
+    if (!tagElem) return;
+
+    // Remove styling
+    tagElem.classList.remove('tag-list-active');
+
+    // Set onclick to dispatch commit
+    tagElem.onclick = () => {
+      document.dispatchEvent(new CustomEvent('commitTag', { detail: { tag: tagName } }));
+    };
+
+    // Put it back in the correct alphabetical spot
+    const nextHighestNode = Array.from(
+      document.getElementById('inactive-tags').querySelectorAll(`.tag-list-item`)
+    ).find((el) => el.textContent.trim() > tagName);
+    if (nextHighestNode) {
+      document.getElementById('inactive-tags').insertBefore(tagElem, nextHighestNode);
+    } else {
+      document.getElementById('inactive-tags').appendChild(tagElem);
+    }
   }
 }
 
@@ -578,7 +632,3 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 /** @typedef {{text: string, start: number, end: number}} TagInfo */
-
-document.addValidTag = function (tagName) {
-  document.dispatchEvent(new CustomEvent('commitTag', { detail: { tag: tagName } }));
-};

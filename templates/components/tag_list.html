@@ -1,6 +1,9 @@
-<div class="tag-cloud">
+<div id="active-tags" class="tag-list"></div>
+<div id="inactive-tags" class="tag-list">
   {% for tag in tags %}
-    <span class="tag-cloud-item" onclick="addValidTag('{{ tag.name }}')"
+    <span
+      class="tag-list-item"
+      onclick="document.dispatchEvent(new CustomEvent('commitTag', { detail: { tag: '{{ tag.name }}' } }))"
       >{{ tag.name }}</span
     >
   {% endfor %}

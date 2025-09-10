@@ -102,7 +102,10 @@ fn create_router(app_state: Arc<AppState>) -> Result<Router> {
         .with_state(app_state);
 
     let route = if cfg!(debug_assertions) {
-        route.layer(LiveReloadLayer::new())
+        route.layer(LiveReloadLayer::new().request_predicate(|req: &axum::http::Request<_>| {
+            // Only inject livereload for full page requests, not HTMX partials
+            !req.headers().contains_key("HX-Request")
+        }))
     } else {
         route
     }

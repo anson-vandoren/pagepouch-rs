@@ -1,0 +1,14 @@
+<section class="sidebar">
+  <h2>
+    <a
+      href="#"
+      class="bookmarks-title-link"
+      onclick="document.dispatchEvent(new Event('clearAllCommittedTags'))"
+      >Tags</a
+    >
+  </h2>
+  <hr id="tag-separator" />
+  <div id="tag-column" hx-get="/api/tags" hx-trigger="load">
+    <div class="loading">Loading tags...</div>
+  </div>
+</section>

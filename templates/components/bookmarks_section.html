@@ -6,8 +6,8 @@
         hx-get="/api/bookmarks"
         hx-target="#bookmark-content"
         hx-trigger="click"
-        onclick="document.getElementById('bookmark-search').value = ''; hideTagSuggestions(); return false;"
         class="bookmarks-title-link"
+        onclick="document.dispatchEvent(new Event('clearAllCommittedTags'))"
       >
         Bookmarks
       </a>

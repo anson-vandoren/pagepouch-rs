@@ -55,7 +55,7 @@ Enhance the current basic search functionality with advanced query parsing, tag 
 #### Tag Filter Display
 
 - **Location**: Below search bar/header area
-- **Appearance**: Each active tag in its own styled box/pill
+- **Appearance**: Each active tag in its own styled box
 - **Interaction**: Click to remove from query
 - **Example**: `[× rust] [× web development]`
 
@@ -67,7 +67,7 @@ Enhance the current basic search functionality with advanced query parsing, tag 
 
 ## Technical Implementation Decisions
 
-1. **Query Parser**: Custom parser for full control over `#tag` syntax and tag pills integration
+1. **Query Parser**: Custom parser for full control over `#tag` syntax and active tag filter integration
 2. **Tag Autocompletion**: Fuzzy tag auto-complete using `fuzzy-matcher` crate
 3. **Search History**: Future enhancement, not implemented in this phase
 4. **URL Updates**: Search state will be reflected in the URL for bookmarking
@@ -121,12 +121,12 @@ Enhance the current basic search functionality with advanced query parsing, tag 
 ### Phase 2: Tag Syntax & UI ✅
 
 - ✅ `#tag` parsing and filtering
-- ✅ Tag pill UI component below search bar
-- ✅ Tag removal by clicking pills
+- ✅ Tag filter UI component below tag column header
+- ✅ Tag removal by clicking active tags
 - ✅ Fuzzy LIKE matching for tag searches
 - ✅ Tag cloud click integration
 - ✅ Bookmark tag click integration
-- ✅ Tag pill styling and alignment
+- ✅ Active tag filter box styling and alignment
 
 ### Phase 3: Fuzzy Tag Autocompletion ✅
 
@@ -197,6 +197,6 @@ For each of these bugs, create one or more test case(s), verify failing, fix, ve
   This is still broken even with `test_partial_tag_search_bug`.
 - Search terms inside of quotes (single or double) should only match exactly, not fuzzy-matching
 
-- Shift-tabbing back up the list changes the input which triggers a re-search which narrows the list to one
 - Suggested tags should filter out tags already active in the filter
 - Suggested tags should filter out tags that aren't a match for current results (BUT ONLY if we're looking at all possible, not paginated partial)
+- When tag filters are active, bookmark results should highlight tags that are in the filter

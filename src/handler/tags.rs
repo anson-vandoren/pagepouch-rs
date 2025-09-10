@@ -26,7 +26,7 @@ pub struct TagListTemplate {
     pub tags: Vec<Tag>,
 }
 
-/// API handler for tag cloud (HTMX lazy loading)
+/// API handler for tag list (HTMX lazy loading)
 pub async fn tag_list_handler(State(state): ApiState, Extension(user): Extension<User>) -> impl IntoResponse {
     // Get tags from database
     let db_tags = tags::get_user_tags(&state.pool, user.user_id).await.unwrap_or_default();

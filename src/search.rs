@@ -193,7 +193,7 @@ impl SearchQuery {
     }
 
     /// Determines if a tag at the end of input should be considered complete.
-    /// This helps avoid showing incomplete tags in filter pills while typing.
+    /// This helps avoid showing incomplete tags in autocomplete while typing.
     fn is_tag_complete(tag_content: &str, full_input: &str) -> bool {
         // If the tag is empty or very short, it's probably incomplete
         if tag_content.len() < 2 {

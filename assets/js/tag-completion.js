@@ -297,7 +297,6 @@ class TagCompletion {
       const item = document.createElement('div');
       item.className = 'tag-suggestion-item';
       item.textContent = suggestion.name;
-      item.dataset.index = index;
 
       item.addEventListener('click', (event) => {
         event.preventDefault();
@@ -608,13 +607,17 @@ class TagCompletion {
 
     // Try to scroll the container such that the selected item is in the middle
     const selectedItem = items[this.selectedSuggestionIndex];
-    const top =
-      selectedItem.offsetTop - this.suggestionsDiv.clientHeight / 2 + selectedItem.offsetHeight / 2;
-    this.suggestionsDiv.scroll({
-      top,
-      behavior: 'smooth',
-      left: 0,
-    });
+    if (selectedItem) {
+      const top =
+        selectedItem.offsetTop -
+        this.suggestionsDiv.clientHeight / 2 +
+        selectedItem.offsetHeight / 2;
+      this.suggestionsDiv.scroll({
+        top,
+        behavior: 'smooth',
+        left: 0,
+      });
+    }
 
     items.forEach((item, index) => {
       if (index === this.selectedSuggestionIndex) {
@@ -764,7 +767,10 @@ class TagCompletion {
    * @param {string} tagName - Name of the tag to highlight (optional - highlights all if not provided)
    */
   highlightMatchingBookmarkTags(tagName = null) {
-    if (!this.ensureTagsContainers()) return;
+    if (!this.bookmarkContent) {
+      console.warn('Bookmark content container not found');
+      return;
+    }
 
     const tagsToHighlight = tagName ? [tagName] : Array.from(this.committedTags);
 
@@ -784,7 +790,10 @@ class TagCompletion {
    * @param {string} tagName - Name of the tag to unhighlight (optional - removes all if not provided)
    */
   unhighlightBookmarkTags(tagName = null) {
-    if (!this.ensureTagsContainers()) return;
+    if (!this.bookmarkContent) {
+      console.warn('Bookmark content container not found');
+      return;
+    }
 
     if (tagName) {
       // Remove highlighting from specific tag

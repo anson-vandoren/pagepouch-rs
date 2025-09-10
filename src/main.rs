@@ -14,6 +14,7 @@ mod error;
 mod handler;
 mod route;
 mod search;
+mod trace;
 
 /// Shared application state accessible across all request handlers.
 pub struct AppState {

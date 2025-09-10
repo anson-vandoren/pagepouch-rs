@@ -11,7 +11,7 @@ use axum::{
 };
 use tokio::time;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
-use tower_http::{classify::StatusInRangeAsFailures, compression::CompressionLayer, services::ServeDir, trace::TraceLayer};
+use tower_http::{compression::CompressionLayer, services::ServeDir};
 use tower_livereload::LiveReloadLayer;
 use tracing::debug;
 
@@ -25,6 +25,7 @@ use crate::{
         settings::{settings_handler, theme_toggle_handler, update_theme_handler},
         tags::{tag_autocomplete_handler, tag_list_handler},
     },
+    trace::create_filtered_trace_layer,
 };
 
 /// Starts the HTTP server with the configured routes and middleware.
@@ -70,7 +71,9 @@ fn create_router(app_state: Arc<AppState>) -> Result<Router> {
             interval.tick().await;
             let login_len = login_limiter.len();
             let general_len = general_limiter.len();
-            debug!(login_len, general_len, "Login rate limiter cleanup");
+            if login_len > 1 || general_len > 1 {
+                debug!(login_len, general_len, "Login rate limiter cleanup");
+            }
             login_limiter.retain_recent();
             general_limiter.retain_recent();
         }
@@ -104,7 +107,7 @@ fn create_router(app_state: Arc<AppState>) -> Result<Router> {
         route
     }
     .layer(CompressionLayer::new())
-    .layer(TraceLayer::new(StatusInRangeAsFailures::new(400..=599).into_make_classifier()));
+    .layer(create_filtered_trace_layer());
 
     Ok(route)
 }
@@ -123,7 +126,7 @@ fn init_tracing() -> anyhow::Result<()> {
         .unwrap_or(default_external_filter)
         .add_directive(format!("{app_name}=off").parse()?);
     let external_crates_layer = fmt::layer()
-        .pretty()
+        .compact()
         .with_file(false)
         .with_line_number(false)
         .with_target(false)
@@ -135,10 +138,10 @@ fn init_tracing() -> anyhow::Result<()> {
         .add_directive(LevelFilter::OFF.into())
         .add_directive(format!("{app_name}=debug").parse()?);
     let our_app_layer = fmt::layer()
-        .pretty()
-        .with_target(true)
-        .with_file(true)
-        .with_line_number(true)
+        .compact()
+        .with_file(false)
+        .with_line_number(false)
+        .with_target(false)
         .with_filter(our_app_only_filter);
 
     tracing_subscriber::registry()

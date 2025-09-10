@@ -23,7 +23,7 @@ use crate::{
         handle_404, home_handler,
         middlewares::auth_user_middleware,
         settings::{settings_handler, theme_toggle_handler, update_theme_handler},
-        tags::tag_list_handler,
+        tags::{tag_autocomplete_handler, tag_list_handler},
     },
 };
 
@@ -85,6 +85,7 @@ fn create_router(app_state: Arc<AppState>) -> Result<Router> {
         .route("/bookmarks", post(bookmark_create_handler))
         .route("/api/bookmarks", get(bookmark_content_handler))
         .route("/api/tags", get(tag_list_handler))
+        .route("/api/tags/autocomplete", get(tag_autocomplete_handler))
         .route("/api/fetch-title", post(fetch_title_handler))
         .route("/api/settings/theme-toggle", get(theme_toggle_handler))
         .route("/api/settings/theme", post(update_theme_handler))

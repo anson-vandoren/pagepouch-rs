@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n        select distinct\n            b.bookmark_id,\n            b.url,\n            b.title,\n            b.description,\n            b.created_at,\n            u.username as created_by\n        from bookmarks b\n        join users u on b.user_id = u.user_id\n        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id\n        left join tags t on bt.tag_id = t.tag_id\n        where b.user_id = ? and b.is_archived = 0 \n        and (\n            b.title like ? or \n            b.description like ? or \n            b.url like ? or\n            t.name like ?\n        )\n        order by b.created_at desc\n        limit ? offset ?\n        ",
+  "query": "\n        select\n            b.bookmark_id,\n            b.url,\n            b.title,\n            b.description,\n            b.created_at,\n            u.username as created_by\n        from bookmarks b\n        join users u on b.user_id = u.user_id\n        where b.user_id = ? and b.is_archived = 0\n        order by b.created_at desc\n        limit ? offset ?\n        ",
   "describe": {
     "columns": [
       {
@@ -35,7 +35,7 @@
       }
     ],
     "parameters": {
-      "Right": 7
+      "Right": 3
     },
     "nullable": [
       false,
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "cc9c66c9f20818e0c0f4f72cde7b225a24254360008281cda4fc414715a010e9"
+  "hash": "2788eeb0d651a9212dbd1153080aa03fdfa93fe05381480ecdd533fcb79ed1b2"
 }

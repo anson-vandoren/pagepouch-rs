@@ -1,12 +1,8 @@
 //! Bookmark-related handlers and templates.
 
 use askama::Template;
-use axum::{
-    Extension, Form,
-    extract::{Query, State},
-    http::StatusCode,
-    response::IntoResponse,
-};
+use axum::{Extension, Form, extract::State, http::StatusCode, response::IntoResponse};
+use axum_extra::extract::Query;
 use serde::Deserialize;
 use tracing::{debug, error, warn};
 
@@ -14,6 +10,7 @@ use crate::{
     ApiState,
     db::{bookmarks, users::User},
     handler::{AuthState, HomeTemplate, HtmlTemplate, Toast, Toasts},
+    search::SearchQuery,
 };
 
 // Template data structures for display
@@ -46,13 +43,18 @@ pub struct PageLink {
 pub struct BookmarkContentTemplate {
     pub bookmarks: Vec<Bookmark>,
     pub pagination: Option<Pagination>,
+    pub active_tags: Vec<String>,
+    pub search_query: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct BookmarkQuery {
-    pub q: Option<String>,   // Search query
-    pub tag: Option<String>, // Filter by tag
-    pub page: Option<i64>,   // Page number
+    pub q: Option<String>, // Search query
+    /// Filter by tags - complete/committed tags will not be part of the `q`, only partial tags that need
+    /// auto-complete, or invalid tags (non-existing tags followed by whitespace) which should be ignored
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
+    pub page: Option<i64>, // Page number
 }
 
 /// API handler for bookmark content (HTMX lazy loading)
@@ -68,19 +70,33 @@ pub async fn bookmark_content_handler(
     let page = params.page.unwrap_or(1);
     let offset = (page - 1) * DEFAULT_LIMIT;
 
-    // Get bookmarks from database based on filters
-    let db_bookmarks = if let Some(ref tag_name) = params.tag {
-        bookmarks::get_user_bookmarks_by_tag(&state.pool, user.user_id, tag_name, limit, offset)
+    // Parse search query to extract tags and determine search type
+    let tags = if let Some(tags) = params.tags { tags } else { vec![] };
+    let (db_bookmarks, active_tags, current_search_query) = if !tags.is_empty() {
+        let tag_names = tags;
+        // Committed tags from new tag completion system
+        let bookmarks = bookmarks::search_by_tags_only(&state.pool, user.user_id, &tag_names, limit, offset)
             .await
-            .unwrap_or_default()
-    } else if let Some(ref search_query) = params.q {
-        bookmarks::search_user_bookmarks(&state.pool, user.user_id, search_query, limit, offset)
+            .unwrap_or_default();
+        // Don't put committed tags back in search query - they should stay removed
+        let search_query = params.q.unwrap_or_default();
+        (bookmarks, tag_names.clone(), search_query)
+    } else if let Some(ref search_query_str) = params.q {
+        // Parse the search query and use advanced search
+        let search_query = SearchQuery::parse(search_query_str);
+        debug!("Parsed search query: {:?}", search_query);
+
+        let bookmarks = bookmarks::search_user_bookmarks_advanced(&state.pool, user.user_id, &search_query, limit, offset)
             .await
-            .unwrap_or_default()
+            .unwrap_or_default();
+
+        (bookmarks, search_query.tag_filters.clone(), search_query_str.clone())
     } else {
-        bookmarks::get_user_bookmarks(&state.pool, user.user_id, limit, offset)
+        // No filters
+        let bookmarks = bookmarks::get_user_bookmarks(&state.pool, user.user_id, limit, offset)
             .await
-            .unwrap_or_default()
+            .unwrap_or_default();
+        (bookmarks, Vec::new(), String::new())
     };
 
     // Convert database results to template format
@@ -122,6 +138,8 @@ pub async fn bookmark_content_handler(
     HtmlTemplate(BookmarkContentTemplate {
         bookmarks: template_bookmarks,
         pagination,
+        active_tags,
+        search_query: current_search_query,
     })
 }
 

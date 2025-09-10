@@ -13,6 +13,7 @@ mod encryption;
 mod error;
 mod handler;
 mod route;
+mod search;
 
 /// Shared application state accessible across all request handlers.
 pub struct AppState {

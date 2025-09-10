@@ -1,19 +1,28 @@
 <section class="bookmarks-col" aria-label="Bookmarks">
   <div class="bookmarks-header">
-    <h2>Bookmarks</h2>
-    <search>
+    <h2>
+      <a
+        href="#"
+        hx-get="/api/bookmarks"
+        hx-target="#bookmark-content"
+        hx-trigger="click"
+        onclick="document.getElementById('bookmark-search').value = ''; hideTagSuggestions(); return false;"
+        class="bookmarks-title-link"
+      >
+        Bookmarks
+      </a>
+    </h2>
+    <search style="position: relative;">
       <input
         type="text"
         id="bookmark-search"
         name="q"
-        placeholder="Search bookmarks..."
+        placeholder="Search bookmarks... (try #tag)"
         aria-label="Search bookmarks"
-        hx-get="/api/bookmarks"
-        hx-trigger="keyup changed delay:300ms"
-        hx-target="#bookmark-content"
-        hx-params="*"
+        autocomplete="off"
       />
       <button type="button" aria-label="Search">Search</button>
+      {% include "components/tag_suggestions.html" %}
     </search>
   </div>
   <div id="bookmark-content" hx-get="/api/bookmarks" hx-trigger="load">

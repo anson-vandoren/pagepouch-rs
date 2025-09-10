@@ -110,7 +110,7 @@ pub(super) fn clear_session(jar: CookieJar) -> CookieJar {
 pub async fn login_user_handler(State(state): ApiState, jar: CookieJar, Form(form_data): Form<LoginUserSchema>) -> AppResult<Response> {
     let LoginUserSchema { username, password } = form_data;
     let user = check_username_password(&state.pool, username, password).await?;
-    let mut session = make_user_session(&state.pool, &user).await?;
+    let session = make_user_session(&state.pool, &user).await?;
 
     let signed_token = state.encryption.sign_token(session.session_token())?;
 

@@ -9,12 +9,11 @@ anyhow = "1.0.99"
 argon2 = "0.5.3"
 askama = "0.14.0"
 axum = "0.8.4"
-axum-extra = { version = "0.10.1", features = ["cookie"] }
+axum-extra = { version = "0.10.1", features = ["cookie", "query"] }
 base64 = "0.22.1"
 chrono = { version = "0.4.42", features = ["serde"] }
 cookie = "0.18.1"
 dotenvy = "0.15.7"
-futures = "0.3.31"
 fuzzy-matcher = "0.3.7"
 hmac = "0.12.1"
 jwt = "0.16.0"

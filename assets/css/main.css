@@ -716,6 +716,20 @@ header nav {
   padding: 0;
 }
 
+.bookmarks-title-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.bookmarks-title-link:visited {
+  color: inherit;
+}
+
+.bookmarks-title-link:hover {
+  text-decoration: none;
+}
+
 /* Bookmark item styling */
 .bookmark-item:last-child {
   border-bottom: none;
@@ -831,12 +845,11 @@ search input[type='text'] {
   background-color: var(--bg1);
   color: var(--fg0);
   font-size: 0.95rem;
-  transition: all 0.2s ease;
 }
 
 search input[type='text']:focus {
   outline: 2px solid var(--accent);
-  outline-offset: -1px;
+  outline-offset: -2px;
   border-color: var(--accent);
   z-index: 1;
   position: relative;
@@ -1198,6 +1211,149 @@ search button:active {
   border-color: var(--bg3);
 }
 
+/* Tag pills styling */
+.tag-pills {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background-color: var(--bg1);
+  border-radius: 8px;
+  border: 1px solid var(--bg3);
+}
+
+.tag-pills-header {
+  margin-bottom: 0.5rem;
+}
+
+.tag-pills-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--fg2);
+}
+
+.tag-pills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--blue);
+  color: var(--bg);
+  padding: 0.25rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  gap: 0.25rem;
+  height: 2rem;
+}
+
+.tag-pill-text {
+  user-select: none;
+}
+
+.tag-pill-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.125rem;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 50%;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.tag-pill-remove:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.tag-pills-clear-all {
+  padding: 0.25rem 0.75rem;
+  background-color: var(--red);
+  color: var(--bg);
+  border: none;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  height: 2rem; /* Match tag pill height */
+  display: flex;
+  align-items: center;
+}
+
+.tag-pills-clear-all:hover {
+  background-color: var(--red-bright);
+}
+
+/* Tag suggestions styling */
+.tag-suggestions {
+  position: absolute;
+  background-color: var(--bg);
+  border: 1px solid var(--bg3);
+  border-radius: 6px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.tag-suggestions-header {
+  padding: 0.5rem 0.75rem 0.25rem;
+  border-bottom: 1px solid var(--bg2);
+}
+
+.tag-suggestions-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--fg3);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.tag-suggestions-list {
+  padding: 0.25rem 0;
+}
+
+.tag-suggestion-item {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.tag-suggestion-item:hover,
+.tag-suggestion-item.selected {
+  background-color: var(--bg1);
+}
+
+.tag-suggestion-item.selected {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* Tag error styling */
+#bookmark-search.tag-error {
+  border-color: var(--red) !important;
+  box-shadow: 0 0 0 0.2rem rgba(251, 73, 52, 0.25) !important;
+  animation: tag-error-pulse 0.5s ease-in-out;
+}
+
+@keyframes tag-error-pulse {
+  0% { box-shadow: 0 0 0 0.2rem rgba(251, 73, 52, 0.25) !important; }
+  50% { box-shadow: 0 0 0 0.4rem rgba(251, 73, 52, 0.15) !important; }
+  100% { box-shadow: 0 0 0 0.2rem rgba(251, 73, 52, 0.25) !important; }
+}
+
 @media (max-width: 600px) {
   .bookmarks-header {
     flex-direction: column;
@@ -1208,5 +1364,9 @@ search button:active {
   .form-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+  
+  .tag-pills-container {
+    justify-content: flex-start;
   }
 }

@@ -10,6 +10,7 @@
     <meta name="description" content="A bookmark-saving app" />
     <script src="/assets/js/htmx.min.js"></script>
     <script src="/assets/js/htmx-ext-response-targets.js"></script>
+    <script src="/assets/js/tag-completion.js"></script>
   </head>
   <body hx-ext="response-targets">
     <header>
@@ -92,5 +93,26 @@
         html.classList.remove("force-dark", "force-light");
       }
     })();
+
+    // Global function for adding tags to search from anywhere
+    function addTagToSearch(tagName) {
+      const searchInput = document.getElementById('bookmark-search');
+      if (!searchInput) return; // Search input not available on this page
+      
+      const currentQuery = searchInput.value;
+      
+      // Check if tag is already in the search
+      const tagPattern = new RegExp('#' + tagName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=\\s|$)', 'i');
+      if (tagPattern.test(currentQuery)) {
+        return; // Tag already present
+      }
+      
+      // Add the tag to the search query
+      const newQuery = currentQuery.trim() ? `${currentQuery.trim()} #${tagName}` : `#${tagName}`;
+      
+      // Update search input and trigger search
+      searchInput.value = newQuery;
+      htmx.trigger(searchInput, 'keyup');
+    }
   </script>
 </html>

@@ -9,7 +9,7 @@ use askama::Template;
 use axum::{
     extract::State,
     http::StatusCode,
-    response::{Html, IntoResponse, Redirect},
+    response::{Html, IntoResponse},
 };
 use axum_extra::extract::CookieJar;
 use serde::{Deserialize, Serialize};

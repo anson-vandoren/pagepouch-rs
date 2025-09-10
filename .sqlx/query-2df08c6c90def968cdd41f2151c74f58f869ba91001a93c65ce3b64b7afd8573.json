@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        select distinct\n            b.bookmark_id,\n            b.url,\n            b.title,\n            b.description,\n            b.created_at,\n            u.username as created_by\n        from bookmarks b\n        join users u on b.user_id = u.user_id\n        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id\n        left join tags t on bt.tag_id = t.tag_id\n        where b.user_id = ? and b.is_archived = 0\n        and (\n            (b.title like ? or b.description like ? or b.url like ? or t.name like ?) and\n            (b.title like ? or b.description like ? or b.url like ? or t.name like ?)\n        )\n        order by b.created_at desc\n        limit ? offset ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "bookmark_id",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "url",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "title",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "description",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "created_by",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 11
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "2df08c6c90def968cdd41f2151c74f58f869ba91001a93c65ce3b64b7afd8573"
+}

@@ -258,7 +258,9 @@ class TagCompletion {
     try {
       const response = await fetch(`/api/tags/autocomplete?q=${encodeURIComponent(query)}`);
       if (response.ok) {
-        return await response.json();
+        const suggestions = await response.json();
+        // Filter out tags that are already active in the filter
+        return suggestions.filter(suggestion => !this.committedTags.has(suggestion.name));
       }
     } catch (error) {
       console.error('Failed to fetch tag suggestions:', error);

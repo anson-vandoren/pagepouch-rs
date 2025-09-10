@@ -197,5 +197,4 @@ For each of these bugs, create one or more test case(s), verify failing, fix, ve
   This is still broken even with `test_partial_tag_search_bug`.
 - Search terms inside of quotes (single or double) should only match exactly, not fuzzy-matching
 
-- Suggested tags should filter out tags already active in the filter
 - Suggested tags should filter out tags that aren't a match for current results (BUT ONLY if we're looking at all possible, not paginated partial)

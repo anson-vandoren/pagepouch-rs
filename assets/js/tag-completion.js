@@ -137,14 +137,6 @@ class TagCompletion {
       this.handleKeyNavigation(event);
     });
 
-    // Handle text input changes on keyup (after character is entered)
-    this.searchInput.addEventListener('keyup', (event) => {
-      // Only update suggestions if we didn't handle navigation
-      if (!this.isNavigationKey(event.key)) {
-        this.debouncedHandleTagInput();
-      }
-    });
-
     this.searchInput.addEventListener('blur', (event) => {
       // Won't get an Esc key event if the search input is selected, so key on blur instead
       this.handleEscapeKey(event);
@@ -164,6 +156,17 @@ class TagCompletion {
     // Listen for header clicks to clear all committed tags
     document.addEventListener('clearAllCommittedTags', (event) => {
       this.clearAllCommittedTags();
+    });
+
+    // Listen for HTMX events to update highlighting when bookmark content changes
+    document.addEventListener('htmx:afterSwap', (event) => {
+      // Check if the bookmark content was updated
+      if (event.target && event.target.id === 'bookmark-content') {
+        // Re-cache the bookmark content element if it was replaced
+        this.bookmarkContent = document.getElementById('bookmark-content');
+        // Update highlighting for all currently active tags
+        this.updateBookmarkTagHighlighting();
+      }
     });
   }
 
@@ -534,7 +537,7 @@ class TagCompletion {
       this.searchInput.setSelectionRange(tagInfo.start, tagInfo.start);
 
       // Add to committed tags
-      this.committedTags.add(tagName);
+      this.addCommittedTag(tagName);
 
       this.hideDropdown();
       this.clearTagError();
@@ -633,6 +636,7 @@ class TagCompletion {
     try {
       this.committedTags.delete(tagToRemove);
       this.moveTagToInactive(tagToRemove);
+      this.unhighlightBookmarkTags(tagToRemove);
       this.triggerSearchWithCommittedTags();
     } finally {
       this.isUpdatingTags = false;
@@ -650,6 +654,7 @@ class TagCompletion {
       const tagsToDeactivate = Array.from(this.committedTags);
       this.committedTags.clear();
       tagsToDeactivate.forEach((tag) => this.moveTagToInactive(tag));
+      this.unhighlightBookmarkTags();
       this.triggerSearchWithCommittedTags();
     } finally {
       this.isUpdatingTags = false;
@@ -667,6 +672,7 @@ class TagCompletion {
     try {
       this.committedTags.add(tagName);
       this.moveTagToActive(tagName);
+      this.highlightMatchingBookmarkTags(tagName);
       this.triggerSearchWithCommittedTags();
     } finally {
       this.isUpdatingTags = false;
@@ -686,6 +692,13 @@ class TagCompletion {
       this.activeTagsContainer = document.getElementById('active-tags');
       if (!this.activeTagsContainer) {
         console.error('Active tags container not found');
+        isOk = false;
+      }
+    }
+    if (!this.bookmarkContent) {
+      this.bookmarkContent = document.getElementById('bookmark-content');
+      if (!this.bookmarkContent) {
+        console.error('Bookmark content container not found');
         isOk = false;
       }
     }
@@ -743,6 +756,64 @@ class TagCompletion {
       this.inactiveTagsContainer.insertBefore(tagElem, nextHighestNode);
     } else {
       this.inactiveTagsContainer.appendChild(tagElem);
+    }
+  }
+
+  /**
+   * Highlight all bookmark tags that match the currently active filters
+   * @param {string} tagName - Name of the tag to highlight (optional - highlights all if not provided)
+   */
+  highlightMatchingBookmarkTags(tagName = null) {
+    if (!this.ensureTagsContainers()) return;
+
+    const tagsToHighlight = tagName ? [tagName] : Array.from(this.committedTags);
+
+    tagsToHighlight.forEach((tag) => {
+      // Find all bookmark tags with this name
+      const bookmarkTags = this.bookmarkContent.querySelectorAll('.tag');
+      bookmarkTags.forEach((tagElement) => {
+        if (tagElement.textContent.trim() === tag) {
+          tagElement.classList.add('tag-highlighted');
+        }
+      });
+    });
+  }
+
+  /**
+   * Remove highlighting from bookmark tags
+   * @param {string} tagName - Name of the tag to unhighlight (optional - removes all if not provided)
+   */
+  unhighlightBookmarkTags(tagName = null) {
+    if (!this.ensureTagsContainers()) return;
+
+    if (tagName) {
+      // Remove highlighting from specific tag
+      const bookmarkTags = this.bookmarkContent.querySelectorAll('.tag');
+      bookmarkTags.forEach((tagElement) => {
+        if (tagElement.textContent.trim() === tagName) {
+          tagElement.classList.remove('tag-highlighted');
+        }
+      });
+    } else {
+      // Remove highlighting from all tags
+      const highlightedTags = this.bookmarkContent.querySelectorAll('.tag.tag-highlighted');
+      highlightedTags.forEach((tagElement) => {
+        tagElement.classList.remove('tag-highlighted');
+      });
+    }
+  }
+
+  /**
+   * Update bookmark tag highlighting to match current committed tags
+   * Called when bookmark content is refreshed via HTMX
+   */
+  updateBookmarkTagHighlighting() {
+    // Clear all existing highlights first
+    this.unhighlightBookmarkTags();
+
+    // Apply highlights for all committed tags
+    if (this.committedTags.size > 0) {
+      this.highlightMatchingBookmarkTags();
     }
   }
 }

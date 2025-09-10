@@ -776,12 +776,21 @@ header nav {
   font-size: 0.7rem;
   font-weight: 500;
   border: 1px solid var(--bg3);
-  transition: all 0.2s ease;
 }
 
 .tag:hover {
   background-color: var(--bg3);
   cursor: pointer;
+}
+
+/* Highlighted tag styling for active filters */
+.tag.tag-highlighted {
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.tag.tag-highlighted:hover {
+  background-color: var(--accent-hover);
 }
 
 .bookmark-meta {
@@ -1252,7 +1261,7 @@ search button:active {
 .tag-suggestion-item {
   padding: 0.5rem 0.75rem;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  /* transition: background-color 0.2s ease; */
   font-size: 0.875rem;
 }
 

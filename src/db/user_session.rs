@@ -4,13 +4,12 @@ use anyhow::anyhow;
 use chrono::TimeDelta;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 use uuid::Uuid;
 
 use crate::{
     db::{self, users::User},
     error::AppError,
-    handler::Toast,
 };
 
 /// Token representing a user's session.
@@ -26,83 +25,12 @@ pub struct SessionToken(pub Uuid);
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Session {
     sid: SessionToken,
-    messages: Vec<Toast>,
 }
 
 impl Session {
-    const RECORD_SEP: u8 = 0x1E;
-    const UNIT_SEP: u8 = 0x1F;
-
-    /// Creates a new session from a token and serialized messages.
-    pub fn new(sid: SessionToken, message_blob: &[u8]) -> Self {
-        Self {
-            sid,
-            messages: Self::deserialize_messages(message_blob),
-        }
-    }
-
     /// Returns a clone of the session token.
     pub fn session_token(&self) -> SessionToken {
         self.sid
-    }
-
-    /// Takes all messages from the session and clears them, saving state to the database.
-    pub async fn take_messages(&mut self, pool: &SqlitePool) -> Vec<Toast> {
-        let messages = std::mem::take(&mut self.messages);
-        let _ = save_session(pool, self)
-            .await
-            .inspect_err(|e| error!(error = ?e, "Failed to save session after retrieving messages."));
-        messages
-    }
-
-    /// Adds a message to the session, persisting to the database.
-    pub async fn add_message(&mut self, pool: &SqlitePool, message: Toast) {
-        self.messages.push(message);
-        let _ = save_session(pool, self)
-            .await
-            .inspect_err(|e| error!(error=?e, "Failed to save session after adding message."));
-    }
-
-    fn serialize_messages(&self) -> Vec<u8> {
-        let mut blob = Vec::new();
-
-        for (i, toast) in self.messages.iter().enumerate() {
-            if i > 0 {
-                blob.push(Self::RECORD_SEP);
-            }
-
-            blob.push(if toast.is_success { b'1' } else { b'0' });
-            blob.push(Self::UNIT_SEP);
-            blob.extend_from_slice(toast.message.as_bytes());
-        }
-
-        blob
-    }
-
-    fn deserialize_messages(blob: &[u8]) -> Vec<Toast> {
-        if blob.is_empty() {
-            return Vec::new();
-        }
-
-        let mut messages = Vec::new();
-        for record in blob.split(|&b| b == Self::RECORD_SEP) {
-            if record.is_empty() {
-                warn!("Found an empty record in blob={blob:?}");
-                continue;
-            }
-            if let Some(sep_pos) = record.iter().position(|&b| b == Self::UNIT_SEP) {
-                // First byte should be '1' for is_success=true or '0' for false
-                let is_success = record[0] == b'1';
-                let message_bytes = &record[sep_pos + 1..];
-                if let Ok(message) = String::from_utf8(message_bytes.to_vec()) {
-                    messages.push(Toast { is_success, message });
-                } else {
-                    warn!("Invalid UTF-8 message in record={record:?}");
-                }
-            }
-        }
-
-        messages
     }
 }
 
@@ -147,7 +75,6 @@ pub async fn make_user_session(pool: &SqlitePool, user: &User) -> Result<Session
     debug!(username = user.username, "Created new user session.");
     Ok(Session {
         sid: SessionToken(record.token_id),
-        messages: vec![],
     })
 }
 
@@ -179,7 +106,6 @@ pub async fn remove_session(pool: &SqlitePool, session_token: &SessionToken) -> 
 /// Contains the user, their session, and the signed token.
 pub struct SessionLookup {
     pub user: User,
-    pub session: Session,
     pub signed_token: String,
 }
 
@@ -209,33 +135,7 @@ pub async fn from_token(pool: &SqlitePool, session_token: SessionToken, signed_t
     };
 
     let user = db::users::get_by_id(pool, record.user_id).await?;
-    let session = Session::new(session_token, &record.messages.unwrap_or_default());
-    Ok(SessionLookup {
-        user,
-        session,
-        signed_token,
-    })
-}
-
-pub async fn save_session(pool: &SqlitePool, session: &Session) -> Result<(), AppError> {
-    let messages = session.serialize_messages();
-    let res = sqlx::query!(
-        r#"
-            update user_sessions
-            set messages = ?
-            where token_id = ?
-        "#,
-        messages,
-        session.sid.0
-    )
-    .execute(pool)
-    .await?;
-
-    if res.rows_affected() == 0 {
-        Err(AppError::internal(anyhow!("Tried to save a non-existent session: {session:?}")))
-    } else {
-        Ok(())
-    }
+    Ok(SessionLookup { user, signed_token })
 }
 
 pub const DEFAULT_SESSION_MINUTES: i64 = 60;

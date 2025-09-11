@@ -43,8 +43,6 @@ pub struct PageLink {
 pub struct BookmarkContentTemplate {
     pub bookmarks: Vec<Bookmark>,
     pub pagination: Option<Pagination>,
-    pub active_tags: Vec<String>,
-    pub search_query: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -57,6 +55,7 @@ pub struct BookmarkQuery {
     pub page: Option<i64>, // Page number
 }
 
+const DEFAULT_LIMIT: i64 = 20;
 /// API handler for bookmark content (HTMX lazy loading)
 pub async fn bookmark_content_handler(
     State(state): ApiState,
@@ -64,39 +63,31 @@ pub async fn bookmark_content_handler(
     Query(params): Query<BookmarkQuery>,
 ) -> impl IntoResponse {
     debug!(?params, "Bookmark content handler queried");
-    const DEFAULT_LIMIT: i64 = 20;
 
-    let limit = DEFAULT_LIMIT;
     let page = params.page.unwrap_or(1);
     let offset = (page - 1) * DEFAULT_LIMIT;
 
     // Parse search query to extract tags and determine search type
-    let tags = if let Some(tags) = params.tags { tags } else { vec![] };
-    let (db_bookmarks, active_tags, current_search_query) = if !tags.is_empty() {
-        let tag_names = tags;
+    let tags: Vec<String> = params.tags.unwrap_or_default();
+    let db_bookmarks = if !tags.is_empty() {
+        // TODO: we should be able to search by both tags and regular query
         // Committed tags from new tag completion system
-        let bookmarks = bookmarks::search_by_tags_only(&state.pool, user.user_id, &tag_names, limit, offset)
+        bookmarks::search_by_tags_only(&state.pool, user.user_id, &tags, DEFAULT_LIMIT, offset)
             .await
-            .unwrap_or_default();
-        // Don't put committed tags back in search query - they should stay removed
-        let search_query = params.q.unwrap_or_default();
-        (bookmarks, tag_names.clone(), search_query)
+            .unwrap_or_default()
     } else if let Some(ref search_query_str) = params.q {
         // Parse the search query and use advanced search
         let search_query = SearchQuery::parse(search_query_str);
         debug!("Parsed search query: {:?}", search_query);
 
-        let bookmarks = bookmarks::search_user_bookmarks_advanced(&state.pool, user.user_id, &search_query, limit, offset)
+        bookmarks::search_user_bookmarks_advanced(&state.pool, user.user_id, &search_query, DEFAULT_LIMIT, offset)
             .await
-            .unwrap_or_default();
-
-        (bookmarks, search_query.tag_filters.clone(), search_query_str.clone())
+            .unwrap_or_default()
     } else {
         // No filters
-        let bookmarks = bookmarks::get_user_bookmarks(&state.pool, user.user_id, limit, offset)
+        bookmarks::get_user_bookmarks(&state.pool, user.user_id, DEFAULT_LIMIT, offset)
             .await
-            .unwrap_or_default();
-        (bookmarks, Vec::new(), String::new())
+            .unwrap_or_default()
     };
 
     // Convert database results to template format
@@ -121,7 +112,7 @@ pub async fn bookmark_content_handler(
         .collect();
 
     // TODO: Implement proper pagination based on total count
-    let pagination = if i64::try_from(template_bookmarks.len()).unwrap_or(0) == limit {
+    let pagination = if i64::try_from(template_bookmarks.len()).unwrap_or(0) == DEFAULT_LIMIT {
         Some(Pagination {
             has_prev: page > 1,
             has_next: true, // Assume there might be more
@@ -138,8 +129,6 @@ pub async fn bookmark_content_handler(
     HtmlTemplate(BookmarkContentTemplate {
         bookmarks: template_bookmarks,
         pagination,
-        active_tags,
-        search_query: current_search_query,
     })
 }
 

@@ -80,16 +80,6 @@ struct Error404Template<'a> {
 }
 
 #[derive(Default, Template)]
-#[template(path = "error/error_401.html")]
-struct Error401Template<'a> {
-    title: &'a str,
-    reason: &'a str,
-    toasts: Toasts,
-    auth_state: AuthState,
-    is_error: bool,
-}
-
-#[derive(Default, Template)]
 #[template(path = "auth/login.html")]
 struct LoginTemplate<'a> {
     title: &'a str,
@@ -102,17 +92,11 @@ struct LoginTemplate<'a> {
 ///
 /// Authentication is guaranteed by middleware.
 /// Displays any pending toast messages from the user's session.
-pub async fn home_handler(State(state): ApiState, jar: CookieJar) -> impl IntoResponse {
-    let mut session_lookup = check_session_cookie(&state, &jar)
-        .await
-        .expect("Authentication guaranteed by middleware");
-
-    let toasts = session_lookup.session.take_messages(&state.pool).await;
-
+pub async fn home_handler() -> impl IntoResponse {
     HtmlTemplate(HomeTemplate {
         title: "Home",
         auth_state: AuthState::Authenticated,
-        toasts,
+        toasts: vec![],
         is_error: false,
     })
     .into_response()

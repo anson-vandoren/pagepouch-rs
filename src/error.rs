@@ -169,27 +169,6 @@ struct ErrorTemplate<'a> {
     status_code: u16,
 }
 
-/// Template for inline error messages in forms.
-///
-/// Used with HTMX to display field-specific validation errors.
-#[derive(Template)]
-#[template(path = "partials/error_inline.html")]
-pub struct InlineErrorTemplate<'a> {
-    pub field: &'a str,
-    pub message: &'a str,
-}
-
-impl IntoResponse for InlineErrorTemplate<'_> {
-    fn into_response(self) -> axum::response::Response {
-        let headers = [
-            ("hx-retarget", format!("#error-{}", self.field)),
-            ("hx-reswap", "innerHTML".to_string()),
-        ];
-
-        (StatusCode::BAD_REQUEST, headers, HtmlTemplate(self)).into_response()
-    }
-}
-
 impl From<sqlx::Error> for AppError {
     fn from(err: sqlx::Error) -> Self {
         let status = match &err {

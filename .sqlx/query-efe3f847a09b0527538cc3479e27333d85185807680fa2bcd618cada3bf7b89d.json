@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "insert into tags (name, color) values (?, ?) returning tag_id",
+  "query": "insert into tags (name) values (?) returning tag_id",
   "describe": {
     "columns": [
       {
@@ -10,11 +10,11 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 1
     },
     "nullable": [
       false
     ]
   },
-  "hash": "c73a71c9583b8a0971598eed2949fc4df09a6aa45efdb47db4ced80275c74421"
+  "hash": "efe3f847a09b0527538cc3479e27333d85185807680fa2bcd618cada3bf7b89d"
 }

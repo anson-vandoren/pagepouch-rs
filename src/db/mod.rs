@@ -117,36 +117,36 @@ async fn populate_dummy_data(pool: &SqlitePool) -> Result<()> {
 
     // Create tags first
     let tag_data = [
-        ("rust", "#ce5c00"),
-        ("programming", "#3465a4"),
-        ("web-dev", "#4e9a06"),
-        ("javascript", "#f57c00"),
-        ("htmx", "#cc0000"),
-        ("css", "#2563eb"),
-        ("web-framework", "#7c3aed"),
-        ("axum", "#dc2626"),
-        ("systems", "#059669"),
-        ("tokio", "#ea580c"),
-        ("framework", "#9333ea"),
-        ("simple", "#16a085"),
-        ("backend", "#8b5cf6"),
-        ("database", "#0891b2"),
-        ("sqlite", "#1e40af"),
-        ("authentication", "#c2410c"),
-        ("api", "#0d9488"),
-        ("async", "#7c2d12"),
-        ("http", "#166534"),
-        ("server", "#0c4a6e"),
-        ("middleware", "#92400e"),
-        ("routing", "#6b21a8"),
-        ("templates", "#b91c1c"),
-        ("bookmarks", "#047857"),
-        ("self-hosted", "#1f2937"),
+        "rust",
+        "programming",
+        "web-dev",
+        "javascript",
+        "htmx",
+        "css",
+        "web-framework",
+        "axum",
+        "systems",
+        "tokio",
+        "framework",
+        "simple",
+        "backend",
+        "database",
+        "sqlite",
+        "authentication",
+        "api",
+        "async",
+        "http",
+        "server",
+        "middleware",
+        "routing",
+        "templates",
+        "bookmarks",
+        "self-hosted",
     ];
 
     // Insert tags
-    for (name, color) in &tag_data {
-        sqlx::query!("insert or ignore into tags (name, color) values (?, ?)", name, color)
+    for name in &tag_data {
+        sqlx::query!("insert or ignore into tags (name) values (?)", name)
             .execute(pool)
             .await?;
     }

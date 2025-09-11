@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            select distinct t2.name\n            from tags t2\n            join bookmark_tags bt2 on t2.tag_id = bt2.tag_id\n            join bookmarks b2 on bt2.bookmark_id = b2.bookmark_id\n            where b2.user_id = ? and b2.is_archived = 0\n            and b2.bookmark_id in (\n                select distinct b.bookmark_id\n                from bookmarks b\n                join bookmark_tags bt on b.bookmark_id = bt.bookmark_id\n                join tags t on bt.tag_id = t.tag_id\n                where b.user_id = ? and b.is_archived = 0 and t.name like ?\n            )\n            order by t2.name\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "name",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "daa83187983a39cac30f193bb506634d18d4174a3cba5079287bceec3ee056e6"
+}

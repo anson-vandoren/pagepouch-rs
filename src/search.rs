@@ -116,7 +116,7 @@ impl SearchQuery {
         let mut in_quotes = false;
         let mut quote_char = None;
         let mut is_tag = false;
-        let mut chars = input.chars().peekable();
+        let chars = input.chars().peekable();
 
         for ch in chars {
             match ch {

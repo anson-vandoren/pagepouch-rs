@@ -3,20 +3,10 @@
 use anyhow::Result;
 use sqlx::{Row, SqlitePool};
 
-/// Represents a tag with usage information.
-#[derive(Clone, Debug)]
-pub struct TagWithUsage {
-    pub tag_id: Vec<u8>,
-    pub name: String,
-    pub color: Option<String>,
-    pub usage_count: i64,
-}
-
 /// Simple tag information.
 #[derive(Clone, Debug)]
 pub struct TagInfo {
     pub name: String,
-    pub color: Option<String>,
 }
 
 /// Retrieves all tags used by a user's bookmarks, ordered by usage.
@@ -27,7 +17,7 @@ pub struct TagInfo {
 pub async fn get_user_tags(pool: &SqlitePool, user_id: uuid::Uuid) -> Result<Vec<TagInfo>> {
     let tags = sqlx::query!(
         r#"
-        select distinct t.name, t.color
+        select distinct t.name
         from tags t
         join bookmark_tags bt on t.tag_id = bt.tag_id
         join bookmarks b on bt.bookmark_id = b.bookmark_id
@@ -39,53 +29,7 @@ pub async fn get_user_tags(pool: &SqlitePool, user_id: uuid::Uuid) -> Result<Vec
     .fetch_all(pool)
     .await?;
 
-    let result = tags
-        .into_iter()
-        .map(|tag| TagInfo {
-            name: tag.name,
-            color: tag.color,
-        })
-        .collect();
-
-    Ok(result)
-}
-
-/// Retrieves popular tags for a user with usage counts.
-///
-/// # Errors
-///
-/// Returns an error if database query fails.
-pub async fn get_popular_user_tags(pool: &SqlitePool, user_id: uuid::Uuid, limit: i64) -> Result<Vec<TagWithUsage>> {
-    let tags = sqlx::query!(
-        r#"
-        select
-            t.tag_id,
-            t.name,
-            t.color,
-            count(*) as "usage_count: i64"
-        from tags t
-        join bookmark_tags bt on t.tag_id = bt.tag_id
-        join bookmarks b on bt.bookmark_id = b.bookmark_id
-        where b.user_id = ? and b.is_archived = 0
-        group by t.tag_id, t.name, t.color
-        order by 4 desc, t.name
-        limit ?
-        "#,
-        user_id,
-        limit
-    )
-    .fetch_all(pool)
-    .await?;
-
-    let result = tags
-        .into_iter()
-        .map(|tag| TagWithUsage {
-            tag_id: tag.tag_id,
-            name: tag.name,
-            color: tag.color,
-            usage_count: tag.usage_count.unwrap_or(0),
-        })
-        .collect();
+    let result = tags.into_iter().map(|tag| TagInfo { name: tag.name }).collect();
 
     Ok(result)
 }
@@ -95,7 +39,7 @@ pub async fn get_popular_user_tags(pool: &SqlitePool, user_id: uuid::Uuid, limit
 /// # Errors
 ///
 /// Returns an error if database operations fail.
-pub async fn get_or_create_tag(pool: &SqlitePool, name: &str, color: Option<&str>) -> Result<Vec<u8>> {
+pub async fn get_or_create_tag(pool: &SqlitePool, name: &str) -> Result<Vec<u8>> {
     // Normalize tag name (lowercase, trimmed)
     let normalized_name = name.trim().to_lowercase();
 
@@ -108,31 +52,11 @@ pub async fn get_or_create_tag(pool: &SqlitePool, name: &str, color: Option<&str
     }
 
     // Create new tag
-    let result = sqlx::query!(
-        "insert into tags (name, color) values (?, ?) returning tag_id",
-        normalized_name,
-        color
-    )
-    .fetch_one(pool)
-    .await?;
-
-    Ok(result.tag_id)
-}
-
-/// Renames a tag, which automatically propagates to all bookmarks.
-///
-/// # Errors
-///
-/// Returns an error if database operations fail.
-pub async fn rename_tag(pool: &SqlitePool, old_name: &str, new_name: &str) -> Result<bool> {
-    let normalized_old = old_name.trim().to_lowercase();
-    let normalized_new = new_name.trim().to_lowercase();
-
-    let result = sqlx::query!("update tags set name = ? where name = ?", normalized_new, normalized_old)
-        .execute(pool)
+    let result = sqlx::query!("insert into tags (name) values (?) returning tag_id", normalized_name,)
+        .fetch_one(pool)
         .await?;
 
-    Ok(result.rows_affected() > 0)
+    Ok(result.tag_id)
 }
 
 /// Gets tags that are present in bookmarks matching the specified tag filters.
@@ -153,7 +77,7 @@ pub async fn get_tags_for_active_filters(pool: &SqlitePool, user_id: uuid::Uuid,
         let tag_pattern = format!("%{}%", active_tag_filters[0]);
         let tags = sqlx::query!(
             r#"
-            select distinct t2.name, t2.color
+            select distinct t2.name
             from tags t2
             join bookmark_tags bt2 on t2.tag_id = bt2.tag_id
             join bookmarks b2 on bt2.bookmark_id = b2.bookmark_id
@@ -174,13 +98,7 @@ pub async fn get_tags_for_active_filters(pool: &SqlitePool, user_id: uuid::Uuid,
         .fetch_all(pool)
         .await?;
 
-        let result = tags
-            .into_iter()
-            .map(|tag| TagInfo {
-                name: tag.name,
-                color: tag.color,
-            })
-            .collect();
+        let result = tags.into_iter().map(|tag| TagInfo { name: tag.name }).collect();
 
         Ok(result)
     } else {
@@ -188,7 +106,7 @@ pub async fn get_tags_for_active_filters(pool: &SqlitePool, user_id: uuid::Uuid,
         let like_conditions = active_tag_filters.iter().map(|_| "t.name like ?").collect::<Vec<_>>().join(" OR ");
         let sql = format!(
             r"
-            select distinct t2.name, t2.color
+            select distinct t2.name
             from tags t2
             join bookmark_tags bt2 on t2.tag_id = bt2.tag_id
             join bookmarks b2 on bt2.bookmark_id = b2.bookmark_id
@@ -210,37 +128,11 @@ pub async fn get_tags_for_active_filters(pool: &SqlitePool, user_id: uuid::Uuid,
             let tag_pattern = format!("%{tag_name}%");
             query = query.bind(tag_pattern);
         }
-        query = query.bind(active_tag_filters.len() as i64);
+        query = query.bind(i64::try_from(active_tag_filters.len()).unwrap_or(0));
 
         let rows = query.fetch_all(pool).await?;
-        let result = rows
-            .into_iter()
-            .map(|row| TagInfo {
-                name: row.get("name"),
-                color: row.get("color"),
-            })
-            .collect();
+        let result = rows.into_iter().map(|row| TagInfo { name: row.get("name") }).collect();
 
         Ok(result)
     }
-}
-
-/// Deletes unused tags (tags not associated with any bookmarks).
-///
-/// # Errors
-///
-/// Returns an error if database operations fail.
-pub async fn cleanup_unused_tags(pool: &SqlitePool) -> Result<i64> {
-    let result = sqlx::query!(
-        r#"
-        delete from tags
-        where tag_id not in (
-            select distinct tag_id from bookmark_tags
-        )
-        "#
-    )
-    .execute(pool)
-    .await?;
-
-    Ok(i64::try_from(result.rows_affected()).unwrap_or(0))
 }

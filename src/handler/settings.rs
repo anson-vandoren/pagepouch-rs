@@ -9,7 +9,7 @@ use serde::Deserialize;
 use crate::{
     ApiState,
     db::users::User,
-    handler::{AuthState, HtmlTemplate, Toasts, middlewares::check_session_cookie},
+    handler::{AuthState, HtmlTemplate, Toasts},
 };
 
 #[derive(Template)]
@@ -33,19 +33,11 @@ pub struct ThemeUpdate {
 }
 
 /// Handler for the settings page
-pub async fn settings_handler(State(state): ApiState, jar: CookieJar, Extension(_user): Extension<User>) -> impl IntoResponse {
-    let session = check_session_cookie(&state, &jar).await;
-
-    let toasts = if let Ok(mut session_lookup) = session {
-        session_lookup.session.take_messages(&state.pool).await
-    } else {
-        Vec::new()
-    };
-
+pub async fn settings_handler() -> impl IntoResponse {
     HtmlTemplate(SettingsTemplate {
         title: "Settings",
         auth_state: crate::handler::AuthState::Authenticated,
-        toasts,
+        toasts: vec![],
         is_error: false,
     })
 }

@@ -63,7 +63,7 @@ Current tables:
 - `users` - User accounts with UUID primary keys, usernames, hashed passwords
 - `user_sessions` - Session management for authentication
 - `bookmarks` - URLs with title, description, creation metadata, and user ownership
-- `tags` - Normalized tag names with optional colors
+- `tags` - Normalized tag names
 - `bookmark_tags` - Junction table for many-to-many bookmark-tag relationships
 - `bookmark_imports` - Import history tracking for bulk operations
 

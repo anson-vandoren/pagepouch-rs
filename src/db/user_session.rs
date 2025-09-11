@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use chrono::TimeDelta;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 use uuid::Uuid;
 
 use crate::{
@@ -116,25 +116,48 @@ pub struct SessionLookup {
 /// Returns `AppError::unauthorized` if the session doesn't exist.
 /// Returns database errors if queries fail.
 pub async fn from_token(pool: &SqlitePool, session_token: SessionToken, signed_token: String) -> Result<SessionLookup, AppError> {
-    // TODO: extend duration
+    let mut tx = pool.begin().await?;
+    let now = chrono::Utc::now();
+    let new_expires = now
+        .checked_add_signed(DEFAULT_SESSION_DURATION)
+        .expect("It's not the year 2000...")
+        .timestamp();
     let record = sqlx::query!(
         r#"
-            select
-                user_id as "user_id: Uuid",
-                messages
-            from user_sessions
-            where token_id = ?
+        update user_sessions
+        set expires_at = $1
+        where token_id = $2
+        returning
+            user_id as "user_id: Uuid",
+            expires_at
         "#,
-        session_token.0
+        new_expires,
+        session_token.0,
     )
-    .fetch_optional(pool)
+    .fetch_optional(&mut *tx)
     .await?;
 
     let Some(record) = record else {
         return Err(AppError::unauthorized(anyhow!("No user session found.")));
     };
 
+    if record.expires_at < now.timestamp() {
+        let _ignore = sqlx::query!(
+            r#"
+                delete from user_sessions
+                where token_id = $1
+            "#,
+            session_token.0
+        )
+        .execute(&mut *tx)
+        .await
+        .inspect_err(|e| warn!(error = ?e, "Failed to delete expired session, continuing."));
+
+        return Err(AppError::unauthorized(anyhow!("User session expired")));
+    }
+
     let user = db::users::get_by_id(pool, record.user_id).await?;
+    tx.commit().await?;
     Ok(SessionLookup { user, signed_token })
 }
 

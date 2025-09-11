@@ -8,19 +8,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ApiState,
-    db::{tags, users::User},
+    db::{bookmarks::TagInfo, tags, users::User},
     handler::HtmlTemplate,
 };
-
-#[derive(Clone)]
-pub struct Tag {
-    pub name: String,
-}
 
 #[derive(Template)]
 #[template(path = "components/tag_list.html")]
 pub struct TagListTemplate {
-    pub tags: Vec<Tag>,
+    pub tags: Vec<TagInfo>,
     pub active_tags: Vec<String>,
 }
 
@@ -47,11 +42,7 @@ pub async fn tag_list_handler(
         .unwrap_or_default();
 
     // Convert database results to template format, filtering out active tags from inactive list
-    let template_tags: Vec<Tag> = db_tags
-        .into_iter()
-        .filter(|db_tag| !active_tags.contains(&db_tag.name))
-        .map(|db_tag| Tag { name: db_tag.name })
-        .collect();
+    let template_tags: Vec<TagInfo> = db_tags.into_iter().filter(|db_tag| !active_tags.contains(&db_tag.name)).collect();
 
     HtmlTemplate(TagListTemplate {
         tags: template_tags,

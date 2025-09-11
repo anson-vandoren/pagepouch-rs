@@ -8,21 +8,13 @@ use tracing::{debug, error, warn};
 
 use crate::{
     ApiState,
-    db::{bookmarks, users::User},
+    db::{
+        bookmarks::{self, BookmarkWithTags},
+        users::User,
+    },
     handler::{AuthState, HomeTemplate, HtmlTemplate, Toast, Toasts},
     search::SearchQuery,
 };
-
-// Template data structures for display
-#[derive(Clone)]
-pub struct Bookmark {
-    pub url: String,
-    pub title: String,
-    pub tags: Vec<super::tags::Tag>,
-    pub created_by: String,
-    pub created_at: String,
-    pub formatted_date: String,
-}
 
 #[derive(Clone)]
 pub struct Pagination {
@@ -41,7 +33,7 @@ pub struct PageLink {
 #[derive(Template)]
 #[template(path = "components/bookmark_content.html")]
 pub struct BookmarkContentTemplate {
-    pub bookmarks: Vec<Bookmark>,
+    pub bookmarks: Vec<BookmarkWithTags>,
     pub pagination: Option<Pagination>,
 }
 
@@ -91,28 +83,8 @@ pub async fn bookmark_content_handler(
     };
 
     // Convert database results to template format
-    let template_bookmarks: Vec<Bookmark> = db_bookmarks
-        .into_iter()
-        .map(|db_bookmark| {
-            let tags: Vec<super::tags::Tag> = db_bookmark
-                .tags
-                .into_iter()
-                .map(|tag_info| super::tags::Tag { name: tag_info.name })
-                .collect();
-
-            Bookmark {
-                url: db_bookmark.url,
-                title: db_bookmark.title,
-                tags,
-                created_by: db_bookmark.created_by,
-                created_at: db_bookmark.created_at.to_string(),
-                formatted_date: db_bookmark.formatted_date,
-            }
-        })
-        .collect();
-
     // TODO: Implement proper pagination based on total count
-    let pagination = if i64::try_from(template_bookmarks.len()).unwrap_or(0) == DEFAULT_LIMIT {
+    let pagination = if i64::try_from(db_bookmarks.len()).unwrap_or(0) == DEFAULT_LIMIT {
         Some(Pagination {
             has_prev: page > 1,
             has_next: true, // Assume there might be more
@@ -127,7 +99,7 @@ pub async fn bookmark_content_handler(
     };
 
     HtmlTemplate(BookmarkContentTemplate {
-        bookmarks: template_bookmarks,
+        bookmarks: db_bookmarks,
         pagination,
     })
 }

@@ -59,7 +59,6 @@ pub async fn auth_user_middleware(State(state): ApiState, jar: CookieJar, mut re
         }
     };
 
-    // TODO: extend cookie duration
     let jar = set_session(jar, signed_token);
 
     req.extensions_mut().insert(user);

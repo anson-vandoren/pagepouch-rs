@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        update user_sessions\n        set expires_at = $1\n        where token_id = $2\n        returning\n            user_id as \"user_id: Uuid\",\n            expires_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "user_id: Uuid",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "expires_at",
+        "ordinal": 1,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "dde7f0a008ce0a80fec628ee6fc2bd240b1c42934e082291ae3c2021edb1548a"
+}

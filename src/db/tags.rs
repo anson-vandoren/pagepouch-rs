@@ -3,11 +3,7 @@
 use anyhow::Result;
 use sqlx::{Row, SqlitePool};
 
-/// Simple tag information.
-#[derive(Clone, Debug)]
-pub struct TagInfo {
-    pub name: String,
-}
+use crate::db::bookmarks::TagInfo;
 
 /// Retrieves all tags used by a user's bookmarks, ordered by usage.
 ///

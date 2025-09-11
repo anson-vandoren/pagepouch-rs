@@ -71,3 +71,4 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Limit the number of suggestions returned to ~10 or so, ranked.
 - Login page is too skinny
 - Minify CSS and JS for prod
+- Are HTMX/Askama still even the right choice here? This is much more of an app than a static page...

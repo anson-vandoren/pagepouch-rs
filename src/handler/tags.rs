@@ -1,11 +1,8 @@
 //! Tag-related handlers and templates.
 
 use askama::Template;
-use axum::{
-    Extension, Json,
-    extract::{Query, State},
-    response::IntoResponse,
-};
+use axum::{Extension, Json, extract::State, response::IntoResponse};
+use axum_extra::extract::Query;
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use serde::{Deserialize, Serialize};
 
@@ -24,22 +21,50 @@ pub struct Tag {
 #[template(path = "components/tag_list.html")]
 pub struct TagListTemplate {
     pub tags: Vec<Tag>,
+    pub active_tags: Vec<String>,
+}
+
+/// Query parameters for tag list filtering
+#[derive(Deserialize)]
+pub struct TagListQuery {
+    /// Filter by active tags - committed tags that are currently filtering results
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
 }
 
 /// API handler for tag list (HTMX lazy loading)
-pub async fn tag_list_handler(State(state): ApiState, Extension(user): Extension<User>) -> impl IntoResponse {
-    // Get tags from database
-    let db_tags = tags::get_user_tags(&state.pool, user.user_id).await.unwrap_or_default();
+pub async fn tag_list_handler(
+    State(state): ApiState,
+    Extension(user): Extension<User>,
+    Query(params): Query<TagListQuery>,
+) -> impl IntoResponse {
+    // Extract active tag filters
+    let active_tags = params.tags.unwrap_or_default();
 
-    // Convert database results to template format
-    let template_tags: Vec<Tag> = db_tags.into_iter().map(|db_tag| Tag { name: db_tag.name }).collect();
+    // Get tags filtered by active tag filters
+    let db_tags = tags::get_tags_for_active_filters(&state.pool, user.user_id, &active_tags)
+        .await
+        .unwrap_or_default();
 
-    HtmlTemplate(TagListTemplate { tags: template_tags })
+    // Convert database results to template format, filtering out active tags from inactive list
+    let template_tags: Vec<Tag> = db_tags
+        .into_iter()
+        .filter(|db_tag| !active_tags.contains(&db_tag.name))
+        .map(|db_tag| Tag { name: db_tag.name })
+        .collect();
+
+    HtmlTemplate(TagListTemplate {
+        tags: template_tags,
+        active_tags: active_tags.clone(),
+    })
 }
 
 #[derive(Deserialize)]
 pub struct TagAutocompleteQuery {
     pub q: String,
+    /// Filter by active tags - committed tags that are currently filtering results
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
 }
 
 #[derive(Serialize)]
@@ -54,8 +79,13 @@ pub async fn tag_autocomplete_handler(
     Extension(user): Extension<User>,
     Query(query): Query<TagAutocompleteQuery>,
 ) -> impl IntoResponse {
-    // Get all user tags from database
-    let db_tags = tags::get_user_tags(&state.pool, user.user_id).await.unwrap_or_default();
+    // Extract active tag filters
+    let active_tags = query.tags.unwrap_or_default();
+
+    // Get tags filtered by active tag filters
+    let db_tags = tags::get_tags_for_active_filters(&state.pool, user.user_id, &active_tags)
+        .await
+        .unwrap_or_default();
 
     // Skip if query is too short to avoid too many matches
     if query.q.len() < 1 {

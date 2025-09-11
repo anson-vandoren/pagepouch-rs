@@ -256,11 +256,18 @@ class TagCompletion {
    */
   async fetchTagSuggestions(query) {
     try {
-      const response = await fetch(`/api/tags/autocomplete?q=${encodeURIComponent(query)}`);
+      const tags = Array.from(this.committedTags);
+      const params = new URLSearchParams({ q: query });
+
+      // Add committed tags to filter the suggestions
+      tags.forEach((tag) => params.append('tags', tag));
+
+      const response = await fetch(`/api/tags/autocomplete?${params.toString()}`);
       if (response.ok) {
         const suggestions = await response.json();
         // Filter out tags that are already active in the filter
-        return suggestions.filter(suggestion => !this.committedTags.has(suggestion.name));
+        let res = suggestions.filter((suggestion) => !this.committedTags.has(suggestion.name));
+        return res;
       }
     } catch (error) {
       console.error('Failed to fetch tag suggestions:', error);
@@ -377,7 +384,7 @@ class TagCompletion {
         console.warn('Unexpectedly got Esc keypress inside search input listener.');
         break;
       case ' ':
-        this.handleSpaceKey(event);
+        await this.handleSpaceKey(event);
         break;
     }
   }
@@ -462,8 +469,8 @@ class TagCompletion {
   /**
    * Handle Space key - commit if exact match exists
    */
-  handleSpaceKey(event) {
-    this.commitIfValidTag(event);
+  async handleSpaceKey(event) {
+    await this.commitIfValidTag(event);
   }
 
   async commitIfValidTag(event) {
@@ -478,6 +485,10 @@ class TagCompletion {
     }
     const exactMatch = this.tagSuggestions.find((s) => s.name === tagInfo.text);
 
+    // If this came from a space keypress, and the cursor has advanced, bring it back
+    if ((this.searchInput.selectionStart || 0) > cursorPos) {
+      this.searchInput.setSelectionRange(cursorPos, cursorPos);
+    }
     if (exactMatch) {
       event.preventDefault();
       this.commitTagSuggestion(exactMatch.name);
@@ -560,10 +571,31 @@ class TagCompletion {
     const searchTerms = this.stripIncompleteTagSyntax(this.searchInput.value.trim());
     let tags = Array.from(this.committedTags);
 
+    if (searchTerms.length === 0 && tags.length === 0) return;
+
     // Use HTMX to make request with custom parameters
     htmx.ajax('GET', '/api/bookmarks', {
       values: { q: searchTerms, tags },
       target: '#bookmark-content',
+      swap: 'innerHTML',
+    });
+
+    // Also refresh the tag column to show only relevant tags
+    this.refreshTagColumn();
+  }
+
+  /**
+   * Refresh the tag column to show only tags relevant to current active filters
+   */
+  refreshTagColumn() {
+    if (typeof htmx === 'undefined') return;
+
+    const tags = Array.from(this.committedTags);
+
+    // Use HTMX to refresh the tag column with current active tags
+    htmx.ajax('GET', '/api/tags', {
+      values: { tags },
+      target: '#tag-column',
       swap: 'innerHTML',
     });
   }
@@ -641,7 +673,6 @@ class TagCompletion {
     this.isUpdatingTags = true;
     try {
       this.committedTags.delete(tagToRemove);
-      this.moveTagToInactive(tagToRemove);
       this.unhighlightBookmarkTags(tagToRemove);
       this.triggerSearchWithCommittedTags();
     } finally {
@@ -659,7 +690,6 @@ class TagCompletion {
     try {
       const tagsToDeactivate = Array.from(this.committedTags);
       this.committedTags.clear();
-      tagsToDeactivate.forEach((tag) => this.moveTagToInactive(tag));
       this.unhighlightBookmarkTags();
       this.triggerSearchWithCommittedTags();
     } finally {
@@ -677,7 +707,6 @@ class TagCompletion {
     this.isUpdatingTags = true;
     try {
       this.committedTags.add(tagName);
-      this.moveTagToActive(tagName);
       this.highlightMatchingBookmarkTags(tagName);
       this.triggerSearchWithCommittedTags();
     } finally {
@@ -710,59 +739,6 @@ class TagCompletion {
     }
 
     return isOk;
-  }
-
-  /**
-   * Move a tag from inactive to active section, applying filter styling
-   * @param {string} tagName - Name of the tag to move to active section
-   */
-  moveTagToActive(tagName) {
-    if (!this.ensureTagsContainers()) return;
-
-    // Find the tag element in inactive section
-    const tagElem = Array.from(this.inactiveTagsContainer.querySelectorAll('.tag-list-item')).find(
-      (el) => el.textContent.trim() === tagName
-    );
-
-    if (!tagElem) return;
-
-    // Apply active styling and move to active section
-    tagElem.classList.add('tag-list-active');
-    tagElem.setAttribute('aria-pressed', 'true');
-    tagElem.title = `Remove ${tagName} filter`;
-
-    this.activeTagsContainer.appendChild(tagElem);
-  }
-
-  /**
-   * Move a tag from active to inactive section, removing filter styling and maintaining alphabetical order
-   * @param {string} tagName - Name of the tag to move to inactive section
-   */
-  moveTagToInactive(tagName) {
-    if (!this.ensureTagsContainers()) return;
-
-    // Find the tag element in active section
-    const tagElem = Array.from(this.activeTagsContainer.querySelectorAll('.tag-list-item')).find(
-      (el) => el.textContent.trim() === tagName
-    );
-
-    if (!tagElem) return;
-
-    // Remove active styling and attributes
-    tagElem.classList.remove('tag-list-active');
-    tagElem.setAttribute('aria-pressed', 'false');
-    tagElem.title = `Add ${tagName} filter`;
-
-    // Insert back into inactive section in alphabetical order
-    const nextHighestNode = Array.from(
-      this.inactiveTagsContainer.querySelectorAll('.tag-list-item')
-    ).find((el) => el.textContent.trim() > tagName);
-
-    if (nextHighestNode) {
-      this.inactiveTagsContainer.insertBefore(tagElem, nextHighestNode);
-    } else {
-      this.inactiveTagsContainer.appendChild(tagElem);
-    }
   }
 
   /**

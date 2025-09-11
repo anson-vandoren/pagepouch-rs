@@ -536,7 +536,6 @@ async fn search_two_terms_and(
 
 /// Helper function to build BookmarkWithTags results from query results.
 async fn build_bookmark_results(pool: &SqlitePool, bookmarks: Vec<BookmarkQueryResult>) -> Result<Vec<BookmarkWithTags>> {
-    let s = bookmarks.iter().map(|b| b.title.clone()).collect::<Vec<_>>();
     let mut result = Vec::new();
     for bookmark in bookmarks {
         // Get tags for this bookmark

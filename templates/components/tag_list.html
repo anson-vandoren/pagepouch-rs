@@ -1,12 +1,19 @@
-<div id="active-tags" class="tag-list" aria-label="Active tag filters"></div>
+<div id="active-tags" class="tag-list" aria-label="Active tag filters">{% for active_tag in active_tags %}<span
+      class="tag-list-item tag-list-active"
+      role="button"
+      tabindex="0"
+      aria-pressed="true"
+      title="Remove {{ active_tag }} filter"
+      >{{ active_tag }}</span>{% endfor %}</div>
 <div id="inactive-tags" class="tag-list" aria-label="Available tags">
   {% for tag in tags %}
-    <span 
-      class="tag-list-item" 
+    <span
+      class="tag-list-item"
       role="button"
       tabindex="0"
       aria-pressed="false"
       title="Add {{ tag.name }} filter"
-    >{{ tag.name }}</span>
+      >{{ tag.name }}</span
+    >
   {% endfor %}
 </div>

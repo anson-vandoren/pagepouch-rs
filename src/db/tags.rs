@@ -1,7 +1,7 @@
 //! Tag database operations.
 
 use anyhow::Result;
-use sqlx::SqlitePool;
+use sqlx::{Row, SqlitePool};
 
 /// Represents a tag with usage information.
 #[derive(Clone, Debug)]
@@ -133,6 +133,97 @@ pub async fn rename_tag(pool: &SqlitePool, old_name: &str, new_name: &str) -> Re
         .await?;
 
     Ok(result.rows_affected() > 0)
+}
+
+/// Gets tags that are present in bookmarks matching the specified tag filters.
+/// If no tag filters are provided, returns all user tags.
+///
+/// # Errors
+///
+/// Returns an error if database query fails.
+pub async fn get_tags_for_active_filters(pool: &SqlitePool, user_id: uuid::Uuid, active_tag_filters: &[String]) -> Result<Vec<TagInfo>> {
+    if active_tag_filters.is_empty() {
+        // No active tags, return all user tags
+        return get_user_tags(pool, user_id).await;
+    }
+
+    // Get tags from bookmarks that match the active tag filters
+    if active_tag_filters.len() == 1 {
+        // Single tag filter - simpler query
+        let tag_pattern = format!("%{}%", active_tag_filters[0]);
+        let tags = sqlx::query!(
+            r#"
+            select distinct t2.name, t2.color
+            from tags t2
+            join bookmark_tags bt2 on t2.tag_id = bt2.tag_id
+            join bookmarks b2 on bt2.bookmark_id = b2.bookmark_id
+            where b2.user_id = ? and b2.is_archived = 0
+            and b2.bookmark_id in (
+                select distinct b.bookmark_id
+                from bookmarks b
+                join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
+                join tags t on bt.tag_id = t.tag_id
+                where b.user_id = ? and b.is_archived = 0 and t.name like ?
+            )
+            order by t2.name
+            "#,
+            user_id,
+            user_id,
+            tag_pattern
+        )
+        .fetch_all(pool)
+        .await?;
+
+        let result = tags
+            .into_iter()
+            .map(|tag| TagInfo {
+                name: tag.name,
+                color: tag.color,
+            })
+            .collect();
+
+        Ok(result)
+    } else {
+        // Multiple tag filters - find bookmarks that have ALL specified tags
+        let like_conditions = active_tag_filters.iter().map(|_| "t.name like ?").collect::<Vec<_>>().join(" OR ");
+        let sql = format!(
+            r#"
+            select distinct t2.name, t2.color
+            from tags t2
+            join bookmark_tags bt2 on t2.tag_id = bt2.tag_id
+            join bookmarks b2 on bt2.bookmark_id = b2.bookmark_id
+            where b2.user_id = ? and b2.is_archived = 0
+            and b2.bookmark_id in (
+                select bt.bookmark_id
+                from bookmark_tags bt
+                join tags t on bt.tag_id = t.tag_id
+                where ({})
+                group by bt.bookmark_id
+                having count(distinct t.tag_id) >= ?
+            )
+            order by t2.name
+            "#,
+            like_conditions
+        );
+
+        let mut query = sqlx::query(&sql).bind(user_id);
+        for tag_name in active_tag_filters {
+            let tag_pattern = format!("%{tag_name}%");
+            query = query.bind(tag_pattern);
+        }
+        query = query.bind(active_tag_filters.len() as i64);
+
+        let rows = query.fetch_all(pool).await?;
+        let result = rows
+            .into_iter()
+            .map(|row| TagInfo {
+                name: row.get("name"),
+                color: row.get("color"),
+            })
+            .collect();
+
+        Ok(result)
+    }
 }
 
 /// Deletes unused tags (tags not associated with any bookmarks).

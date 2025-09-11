@@ -187,7 +187,7 @@ pub async fn get_tags_for_active_filters(pool: &SqlitePool, user_id: uuid::Uuid,
         // Multiple tag filters - find bookmarks that have ALL specified tags
         let like_conditions = active_tag_filters.iter().map(|_| "t.name like ?").collect::<Vec<_>>().join(" OR ");
         let sql = format!(
-            r#"
+            r"
             select distinct t2.name, t2.color
             from tags t2
             join bookmark_tags bt2 on t2.tag_id = bt2.tag_id
@@ -197,13 +197,12 @@ pub async fn get_tags_for_active_filters(pool: &SqlitePool, user_id: uuid::Uuid,
                 select bt.bookmark_id
                 from bookmark_tags bt
                 join tags t on bt.tag_id = t.tag_id
-                where ({})
+                where ({like_conditions})
                 group by bt.bookmark_id
                 having count(distinct t.tag_id) >= ?
             )
             order by t2.name
-            "#,
-            like_conditions
+            "
         );
 
         let mut query = sqlx::query(&sql).bind(user_id);

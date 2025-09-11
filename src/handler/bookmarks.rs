@@ -293,7 +293,7 @@ fn extract_domain_from_url(url: &str) -> Option<String> {
     url.strip_prefix("https://")
         .or_else(|| url.strip_prefix("http://"))
         .and_then(|rest| rest.split('/').next())
-        .map(|domain| domain.to_string())
+        .map(std::string::ToString::to_string)
 }
 
 /// Decodes common HTML entities in text.

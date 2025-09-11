@@ -88,7 +88,7 @@ pub async fn tag_autocomplete_handler(
         .unwrap_or_default();
 
     // Skip if query is too short to avoid too many matches
-    if query.q.len() < 1 {
+    if query.q.is_empty() {
         return Json(Vec::<TagSuggestion>::new());
     }
 

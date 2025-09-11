@@ -33,8 +33,8 @@ pub enum SearchLogic {
 impl fmt::Display for SearchTerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SearchTerm::Word(w) => write!(f, "{}", w),
-            SearchTerm::Phrase(p) => write!(f, "\"{}\"", p),
+            SearchTerm::Word(w) => write!(f, "{w}"),
+            SearchTerm::Phrase(p) => write!(f, "\"{p}\""),
         }
     }
 }
@@ -118,7 +118,7 @@ impl SearchQuery {
         let mut is_tag = false;
         let mut chars = input.chars().peekable();
 
-        while let Some(ch) = chars.next() {
+        for ch in chars {
             match ch {
                 '"' | '\'' if !in_quotes => {
                     // Start of quoted phrase

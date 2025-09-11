@@ -215,7 +215,7 @@ pub async fn search_user_bookmarks_advanced(
             let search_term = query
                 .general_terms
                 .iter()
-                .map(|term| term.to_string())
+                .map(std::string::ToString::to_string)
                 .collect::<Vec<_>>()
                 .join(" ");
             search_user_bookmarks(pool, user_id, &search_term, limit, offset).await?
@@ -486,7 +486,7 @@ async fn search_two_terms_or(
     };
 
     let sql = format!(
-        r#"
+        r"
         select distinct
             b.bookmark_id,
             b.url,
@@ -499,11 +499,10 @@ async fn search_two_terms_or(
         left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
         left join tags t on bt.tag_id = t.tag_id
         where b.user_id = ? and b.is_archived = 0
-        and ({} or {})
+        and ({condition1} or {condition2})
         order by b.created_at desc
         limit ? offset ?
-        "#,
-        condition1, condition2
+        "
     );
 
     let bookmarks = sqlx::query(&sql)
@@ -583,7 +582,7 @@ async fn search_two_terms_and(
 
     // Use EXISTS subqueries to properly handle AND logic across multiple tags
     let sql = format!(
-        r#"
+        r"
         select distinct
             b.bookmark_id,
             b.url,
@@ -595,23 +594,22 @@ async fn search_two_terms_and(
         join users u on b.user_id = u.user_id
         where b.user_id = ? and b.is_archived = 0
         and (
-            {} or exists (
+            {bookmark_condition1} or exists (
                 select 1 from bookmark_tags bt1 
                 join tags t on bt1.tag_id = t.tag_id 
-                where bt1.bookmark_id = b.bookmark_id and {}
+                where bt1.bookmark_id = b.bookmark_id and {tag_condition1}
             )
         )
         and (
-            {} or exists (
+            {bookmark_condition2} or exists (
                 select 1 from bookmark_tags bt2 
                 join tags t on bt2.tag_id = t.tag_id 
-                where bt2.bookmark_id = b.bookmark_id and {}
+                where bt2.bookmark_id = b.bookmark_id and {tag_condition2}
             )
         )
         order by b.created_at desc
         limit ? offset ?
-        "#,
-        bookmark_condition1, tag_condition1, bookmark_condition2, tag_condition2
+        "
     );
 
     let bookmarks = sqlx::query(&sql)
@@ -694,7 +692,7 @@ async fn search_multiple_terms_and(
     }
 
     let sql = format!(
-        r#"
+        r"
         select distinct
             b.bookmark_id,
             b.url,
@@ -708,7 +706,7 @@ async fn search_multiple_terms_and(
         and {}
         order by b.created_at desc
         limit ? offset ?
-        "#,
+        ",
         and_clauses.join(" and ")
     );
 
@@ -742,7 +740,7 @@ async fn search_multiple_terms_and(
     build_bookmark_results(pool, bookmarks).await
 }
 
-/// Helper function to build BookmarkWithTags results from query results.
+/// Helper function to build `BookmarkWithTags` results from query results.
 async fn build_bookmark_results(pool: &SqlitePool, bookmarks: Vec<BookmarkQueryResult>) -> Result<Vec<BookmarkWithTags>> {
     let mut result = Vec::new();
     for bookmark in bookmarks {
@@ -799,7 +797,7 @@ pub async fn search_by_tags_only(
     // For multiple tags, find bookmarks that have ALL specified tags (using LIKE for fuzzy matching)
     let like_conditions = tag_names.iter().map(|_| "t.name like ?").collect::<Vec<_>>().join(" OR ");
     let sql = format!(
-        r#"
+        r"
         select distinct
             b.bookmark_id,
             b.url,
@@ -814,14 +812,13 @@ pub async fn search_by_tags_only(
             select bt.bookmark_id
             from bookmark_tags bt
             join tags t on bt.tag_id = t.tag_id
-            where ({})
+            where ({like_conditions})
             group by bt.bookmark_id
             having count(distinct t.tag_id) >= ?
         )
         order by b.created_at desc
         limit ? offset ?
-        "#,
-        like_conditions
+        "
     );
 
     let mut query = sqlx::query(&sql).bind(user_id);

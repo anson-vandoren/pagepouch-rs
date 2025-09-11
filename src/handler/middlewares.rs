@@ -43,6 +43,7 @@ pub async fn auth_user_middleware(State(state): ApiState, jar: CookieJar, mut re
     let SessionLookup { user, signed_token, .. } = match user {
         Ok(user) => user,
         Err(_reason) => {
+            warn!("API access attempted with no session cookie");
             // Redirect to login instead of returning 401
             return (
                 StatusCode::UNAUTHORIZED,
@@ -86,7 +87,6 @@ pub async fn auth_user_middleware(State(state): ApiState, jar: CookieJar, mut re
 pub async fn check_session_cookie(state: &Arc<AppState>, jar: &CookieJar) -> Result<SessionLookup, String> {
     let maybe_token = jar.get(SESSION_COOKIE).map(Cookie::value);
     let Some(token) = maybe_token else {
-        warn!("API access attempted with no session cookie");
         return Err("Not logged in.".to_string());
     };
     let session_token = match state.encryption.verify_token_sig::<SessionToken>(token) {

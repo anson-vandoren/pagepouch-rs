@@ -7,6 +7,7 @@ use sqlx::SqlitePool;
 
 use crate::{config::Config, encryption::EncryptionProvider};
 
+mod assets;
 mod config;
 mod db;
 mod encryption;

@@ -11,12 +11,13 @@ use axum::{
 };
 use tokio::time;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
-use tower_http::{compression::CompressionLayer, services::ServeDir};
+use tower_http::compression::CompressionLayer;
 use tower_livereload::LiveReloadLayer;
 use tracing::debug;
 
 use crate::{
     AppState,
+    assets::assets_handler,
     handler::{
         auth_handler::{login_page_handler, login_user_handler, logout_handler, session_check_handler},
         bookmarks::{bookmark_content_handler, bookmark_create_handler, bookmark_new_handler, fetch_title_handler},
@@ -42,7 +43,7 @@ use crate::{
 pub(crate) async fn serve(app_state: Arc<AppState>) -> Result<()> {
     init_tracing()?;
 
-    let app = create_router(app_state)?;
+    let app = create_router(app_state);
 
     let port = 8888;
 
@@ -55,9 +56,7 @@ pub(crate) async fn serve(app_state: Arc<AppState>) -> Result<()> {
     Ok(())
 }
 
-fn create_router(app_state: Arc<AppState>) -> Result<Router> {
-    let assets_path = std::env::current_dir()?;
-
+fn create_router(app_state: Arc<AppState>) -> Router {
     let login_conf = Arc::new(GovernorConfigBuilder::default().per_second(1).burst_size(3).finish().unwrap());
     let login_limiter = login_conf.limiter().clone();
 
@@ -94,14 +93,13 @@ fn create_router(app_state: Arc<AppState>) -> Result<Router> {
         .route("/api/settings/theme", post(update_theme_handler))
         .route("/api/session-check", get(session_check_handler))
         .layer(from_fn_with_state(app_state.clone(), auth_user_middleware))
-        .nest_service("/assets", ServeDir::new(format!("{}/assets", assets_path.to_str().unwrap())))
         .layer(GovernorLayer::new(general_conf)) // Apply general rate limiting to all routes
         .route("/login", get(login_page_handler).post(login_handler))
         .route("/logout", post(logout_handler))
-        .fallback(handle_404)
-        .with_state(app_state);
+        .fallback(handle_404);
 
-    let route = if cfg!(debug_assertions) {
+    if cfg!(debug_assertions) {
+        // must be before compression layer to successfully inject the script needed
         route.layer(LiveReloadLayer::new().request_predicate(|req: &axum::http::Request<_>| {
             // Only inject livereload for full page requests, not HTMX partials
             !req.headers().contains_key("HX-Request")
@@ -110,9 +108,10 @@ fn create_router(app_state: Arc<AppState>) -> Result<Router> {
         route
     }
     .layer(CompressionLayer::new())
-    .layer(create_filtered_trace_layer());
-
-    Ok(route)
+    // rust-embed-for-web automatically handles compression
+    .route("/assets/{*path}", get(assets_handler))
+    .with_state(app_state)
+    .layer(create_filtered_trace_layer())
 }
 
 fn init_tracing() -> anyhow::Result<()> {

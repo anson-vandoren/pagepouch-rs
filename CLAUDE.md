@@ -109,10 +109,4 @@ Database operations use SQLx query! macros for compile-time checked queries with
 
 ## Backend Development Requirements
 
-**IMPORTANT**: After completing any backend task involving code changes, you MUST:
-
-1. **Ensure `cargo check` completes successfully** - All code must compile without errors before considering a task complete
-2. **Run `mise run clippy` and fix all addressable lints** - Code quality standards must be maintained. It is almost never the right answer to address a lint by #[allow(clippy::...)]
-3. **Run `mise run migrate`** if database schema or query changes were made - Ensure SQLx metadata is up to date
-
-These steps are mandatory for task completion and ensure code quality and compilation integrity.
+**Important**: before adding any cargo crate, `cargo search crate_name` first to ensure you are using the latest version.

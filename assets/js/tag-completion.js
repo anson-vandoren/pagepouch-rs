@@ -571,7 +571,9 @@ class TagCompletion {
     const searchTerms = this.stripIncompleteTagSyntax(this.searchInput.value.trim());
     let tags = Array.from(this.committedTags);
 
-    if (searchTerms.length === 0 && tags.length === 0) return;
+    // Only skip search if we have incomplete tag syntax in the input
+    // If input is completely empty (no search terms, no committed tags), we should show all bookmarks
+    if (searchTerms.length === 0 && tags.length === 0 && this.hasIncompleteTagSyntax(this.searchInput.value.trim())) return;
 
     // Use HTMX to make request with custom parameters
     htmx.ajax('GET', '/api/bookmarks', {
@@ -608,6 +610,13 @@ class TagCompletion {
   stripIncompleteTagSyntax(input) {
     // Remove any #word patterns and clean up extra spaces
     return input.replace(/#\S*/g, '').replace(/\s+/g, ' ').trim();
+  }
+
+  /**
+   * Check if input contains incomplete tag syntax (#word patterns)
+   */
+  hasIncompleteTagSyntax(input) {
+    return /#\S+/.test(input);
   }
 
   /**

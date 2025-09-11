@@ -206,7 +206,9 @@ pub async fn search_user_bookmarks_advanced(
     let base_results = match (query.logic, query.general_terms.len()) {
         (SearchLogic::Or, 1) => search_single_term(pool, user_id, &query.general_terms[0], limit, offset).await?,
         (SearchLogic::Or, 2) => search_two_terms_or(pool, user_id, &query.general_terms, limit, offset).await?,
-        (SearchLogic::And, 2) => search_two_terms_and(pool, user_id, &query.general_terms, limit, offset).await?,
+        (SearchLogic::And, _) if query.general_terms.len() >= 2 => {
+            search_multiple_terms_and(pool, user_id, &query.general_terms, limit, offset).await?
+        }
         // For more complex queries, fall back to the original search
         _ => {
             tracing::warn!("Complex search query not fully optimized, falling back to simple search");
@@ -377,45 +379,81 @@ pub async fn create_bookmark(
 
 /// Searches for bookmarks with a single search term.
 async fn search_single_term(pool: &SqlitePool, user_id: Uuid, term: &SearchTerm, limit: i64, offset: i64) -> Result<Vec<BookmarkWithTags>> {
-    let search_pattern = match term {
-        SearchTerm::Word(word) => format!("%{word}%"),
-        SearchTerm::Phrase(phrase) => format!("%{phrase}%"),
+    let bookmarks = match term {
+        SearchTerm::Word(word) => {
+            let search_pattern = format!("%{word}%");
+            sqlx::query_as!(
+                BookmarkQueryResult,
+                r#"
+                select distinct
+                    b.bookmark_id,
+                    b.url,
+                    b.title,
+                    b.description,
+                    b.created_at,
+                    u.username as created_by
+                from bookmarks b
+                join users u on b.user_id = u.user_id
+                left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
+                left join tags t on bt.tag_id = t.tag_id
+                where b.user_id = ? and b.is_archived = 0
+                and (
+                    b.title like ? or
+                    b.description like ? or
+                    b.url like ? or
+                    t.name like ?
+                )
+                order by b.created_at desc
+                limit ? offset ?
+                "#,
+                user_id,
+                search_pattern,
+                search_pattern,
+                search_pattern,
+                search_pattern,
+                limit,
+                offset
+            )
+            .fetch_all(pool)
+            .await?
+        }
+        SearchTerm::Phrase(phrase) => {
+            sqlx::query_as!(
+                BookmarkQueryResult,
+                r#"
+                select distinct
+                    b.bookmark_id,
+                    b.url,
+                    b.title,
+                    b.description,
+                    b.created_at,
+                    u.username as created_by
+                from bookmarks b
+                join users u on b.user_id = u.user_id
+                left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
+                left join tags t on bt.tag_id = t.tag_id
+                where b.user_id = ? and b.is_archived = 0
+                and (
+                    instr(b.title, ?) > 0 or
+                    instr(b.description, ?) > 0 or
+                    instr(b.url, ?) > 0 or
+                    instr(t.name, ?) > 0
+                )
+                order by b.created_at desc
+                limit ? offset ?
+                "#,
+                user_id,
+                phrase,
+                phrase,
+                phrase,
+                phrase,
+                limit,
+                offset
+            )
+            .fetch_all(pool)
+            .await?
+        }
     };
-
-    let bookmarks = sqlx::query_as!(
-        BookmarkQueryResult,
-        r#"
-        select distinct
-            b.bookmark_id,
-            b.url,
-            b.title,
-            b.description,
-            b.created_at,
-            u.username as created_by
-        from bookmarks b
-        join users u on b.user_id = u.user_id
-        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
-        left join tags t on bt.tag_id = t.tag_id
-        where b.user_id = ? and b.is_archived = 0
-        and (
-            b.title like ? or
-            b.description like ? or
-            b.url like ? or
-            t.name like ?
-        )
-        order by b.created_at desc
-        limit ? offset ?
-        "#,
-        user_id,
-        search_pattern,
-        search_pattern,
-        search_pattern,
-        search_pattern,
-        limit,
-        offset
-    )
-    .fetch_all(pool)
-    .await?;
 
     build_bookmark_results(pool, bookmarks).await
 }
@@ -428,17 +466,26 @@ async fn search_two_terms_or(
     limit: i64,
     offset: i64,
 ) -> Result<Vec<BookmarkWithTags>> {
+    // Build the WHERE conditions based on term types
+    let condition1 = match &terms[0] {
+        SearchTerm::Word(_) => "(b.title like ? or b.description like ? or b.url like ? or t.name like ?)",
+        SearchTerm::Phrase(_) => "(instr(b.title, ?) > 0 or instr(b.description, ?) > 0 or instr(b.url, ?) > 0 or instr(t.name, ?) > 0)",
+    };
+    let condition2 = match &terms[1] {
+        SearchTerm::Word(_) => "(b.title like ? or b.description like ? or b.url like ? or t.name like ?)",
+        SearchTerm::Phrase(_) => "(instr(b.title, ?) > 0 or instr(b.description, ?) > 0 or instr(b.url, ?) > 0 or instr(t.name, ?) > 0)",
+    };
+
     let pattern1 = match &terms[0] {
         SearchTerm::Word(word) => format!("%{word}%"),
-        SearchTerm::Phrase(phrase) => format!("%{phrase}%"),
+        SearchTerm::Phrase(phrase) => phrase.clone(),
     };
     let pattern2 = match &terms[1] {
         SearchTerm::Word(word) => format!("%{word}%"),
-        SearchTerm::Phrase(phrase) => format!("%{phrase}%"),
+        SearchTerm::Phrase(phrase) => phrase.clone(),
     };
 
-    let bookmarks = sqlx::query_as!(
-        BookmarkQueryResult,
+    let sql = format!(
         r#"
         select distinct
             b.bookmark_id,
@@ -452,27 +499,39 @@ async fn search_two_terms_or(
         left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
         left join tags t on bt.tag_id = t.tag_id
         where b.user_id = ? and b.is_archived = 0
-        and (
-            b.title like ? or b.description like ? or b.url like ? or t.name like ? or
-            b.title like ? or b.description like ? or b.url like ? or t.name like ?
-        )
+        and ({} or {})
         order by b.created_at desc
         limit ? offset ?
         "#,
-        user_id,
-        pattern1,
-        pattern1,
-        pattern1,
-        pattern1,
-        pattern2,
-        pattern2,
-        pattern2,
-        pattern2,
-        limit,
-        offset
-    )
-    .fetch_all(pool)
-    .await?;
+        condition1, condition2
+    );
+
+    let bookmarks = sqlx::query(&sql)
+        .bind(user_id)
+        .bind(&pattern1)
+        .bind(&pattern1)
+        .bind(&pattern1)
+        .bind(&pattern1)
+        .bind(&pattern2)
+        .bind(&pattern2)
+        .bind(&pattern2)
+        .bind(&pattern2)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(pool)
+        .await?;
+
+    let bookmarks: Vec<BookmarkQueryResult> = bookmarks
+        .into_iter()
+        .map(|row| BookmarkQueryResult {
+            bookmark_id: row.get("bookmark_id"),
+            url: row.get("url"),
+            title: row.get("title"),
+            description: row.get("description"),
+            created_at: row.get("created_at"),
+            created_by: row.get("created_by"),
+        })
+        .collect();
 
     build_bookmark_results(pool, bookmarks).await
 }
@@ -485,17 +544,45 @@ async fn search_two_terms_and(
     limit: i64,
     offset: i64,
 ) -> Result<Vec<BookmarkWithTags>> {
+    // Build the bookmark field conditions
+    let (bookmark_condition1, bookmark_condition2) = match (&terms[0], &terms[1]) {
+        (SearchTerm::Word(_), SearchTerm::Word(_)) => (
+            "(b.title like ? or b.description like ? or b.url like ?)",
+            "(b.title like ? or b.description like ? or b.url like ?)",
+        ),
+        (SearchTerm::Word(_), SearchTerm::Phrase(_)) => (
+            "(b.title like ? or b.description like ? or b.url like ?)",
+            "(instr(b.title, ?) > 0 or instr(b.description, ?) > 0 or instr(b.url, ?) > 0)",
+        ),
+        (SearchTerm::Phrase(_), SearchTerm::Word(_)) => (
+            "(instr(b.title, ?) > 0 or instr(b.description, ?) > 0 or instr(b.url, ?) > 0)",
+            "(b.title like ? or b.description like ? or b.url like ?)",
+        ),
+        (SearchTerm::Phrase(_), SearchTerm::Phrase(_)) => (
+            "(instr(b.title, ?) > 0 or instr(b.description, ?) > 0 or instr(b.url, ?) > 0)",
+            "(instr(b.title, ?) > 0 or instr(b.description, ?) > 0 or instr(b.url, ?) > 0)",
+        ),
+    };
+
+    // Build the tag conditions
+    let (tag_condition1, tag_condition2) = match (&terms[0], &terms[1]) {
+        (SearchTerm::Word(_), SearchTerm::Word(_)) => ("t.name like ?", "t.name like ?"),
+        (SearchTerm::Word(_), SearchTerm::Phrase(_)) => ("t.name like ?", "instr(t.name, ?) > 0"),
+        (SearchTerm::Phrase(_), SearchTerm::Word(_)) => ("instr(t.name, ?) > 0", "t.name like ?"),
+        (SearchTerm::Phrase(_), SearchTerm::Phrase(_)) => ("instr(t.name, ?) > 0", "instr(t.name, ?) > 0"),
+    };
+
     let pattern1 = match &terms[0] {
         SearchTerm::Word(word) => format!("%{word}%"),
-        SearchTerm::Phrase(phrase) => format!("%{phrase}%"),
+        SearchTerm::Phrase(phrase) => phrase.clone(),
     };
     let pattern2 = match &terms[1] {
         SearchTerm::Word(word) => format!("%{word}%"),
-        SearchTerm::Phrase(phrase) => format!("%{phrase}%"),
+        SearchTerm::Phrase(phrase) => phrase.clone(),
     };
 
-    let bookmarks = sqlx::query_as!(
-        BookmarkQueryResult,
+    // Use EXISTS subqueries to properly handle AND logic across multiple tags
+    let sql = format!(
         r#"
         select distinct
             b.bookmark_id,
@@ -506,30 +593,151 @@ async fn search_two_terms_and(
             u.username as created_by
         from bookmarks b
         join users u on b.user_id = u.user_id
-        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
-        left join tags t on bt.tag_id = t.tag_id
         where b.user_id = ? and b.is_archived = 0
         and (
-            (b.title like ? or b.description like ? or b.url like ? or t.name like ?) and
-            (b.title like ? or b.description like ? or b.url like ? or t.name like ?)
+            {} or exists (
+                select 1 from bookmark_tags bt1 
+                join tags t on bt1.tag_id = t.tag_id 
+                where bt1.bookmark_id = b.bookmark_id and {}
+            )
+        )
+        and (
+            {} or exists (
+                select 1 from bookmark_tags bt2 
+                join tags t on bt2.tag_id = t.tag_id 
+                where bt2.bookmark_id = b.bookmark_id and {}
+            )
         )
         order by b.created_at desc
         limit ? offset ?
         "#,
-        user_id,
-        pattern1,
-        pattern1,
-        pattern1,
-        pattern1,
-        pattern2,
-        pattern2,
-        pattern2,
-        pattern2,
-        limit,
-        offset
-    )
-    .fetch_all(pool)
-    .await?;
+        bookmark_condition1, tag_condition1, bookmark_condition2, tag_condition2
+    );
+
+    let bookmarks = sqlx::query(&sql)
+        .bind(user_id)
+        // First condition - bookmark fields
+        .bind(&pattern1)
+        .bind(&pattern1)
+        .bind(&pattern1)
+        // First condition - tag exists subquery
+        .bind(&pattern1)
+        // Second condition - bookmark fields
+        .bind(&pattern2)
+        .bind(&pattern2)
+        .bind(&pattern2)
+        // Second condition - tag exists subquery
+        .bind(&pattern2)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(pool)
+        .await?;
+
+    let bookmarks: Vec<BookmarkQueryResult> = bookmarks
+        .into_iter()
+        .map(|row| BookmarkQueryResult {
+            bookmark_id: row.get("bookmark_id"),
+            url: row.get("url"),
+            title: row.get("title"),
+            description: row.get("description"),
+            created_at: row.get("created_at"),
+            created_by: row.get("created_by"),
+        })
+        .collect();
+
+    build_bookmark_results(pool, bookmarks).await
+}
+
+/// Searches for bookmarks with multiple terms using AND logic.
+async fn search_multiple_terms_and(
+    pool: &SqlitePool,
+    user_id: Uuid,
+    terms: &[SearchTerm],
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<BookmarkWithTags>> {
+    if terms.is_empty() {
+        return get_user_bookmarks(pool, user_id, limit, offset).await;
+    }
+
+    // Build conditions for each term
+    let mut bookmark_conditions = Vec::new();
+    let mut tag_conditions = Vec::new();
+    let mut patterns = Vec::new();
+
+    for term in terms {
+        let (bookmark_cond, tag_cond, pattern) = match term {
+            SearchTerm::Word(word) => (
+                "(b.title like ? or b.description like ? or b.url like ?)",
+                "t.name like ?",
+                format!("%{word}%"),
+            ),
+            SearchTerm::Phrase(phrase) => (
+                "(instr(b.title, ?) > 0 or instr(b.description, ?) > 0 or instr(b.url, ?) > 0)",
+                "instr(t.name, ?) > 0",
+                phrase.clone(),
+            ),
+        };
+        bookmark_conditions.push(bookmark_cond);
+        tag_conditions.push(tag_cond);
+        patterns.push(pattern);
+    }
+
+    // Build the AND clauses using EXISTS subqueries
+    let mut and_clauses = Vec::new();
+    for i in 0..terms.len() {
+        let clause = format!(
+            "({} or exists (select 1 from bookmark_tags bt{} join tags t on bt{}.tag_id = t.tag_id where bt{}.bookmark_id = b.bookmark_id and {}))",
+            bookmark_conditions[i], i, i, i, tag_conditions[i]
+        );
+        and_clauses.push(clause);
+    }
+
+    let sql = format!(
+        r#"
+        select distinct
+            b.bookmark_id,
+            b.url,
+            b.title,
+            b.description,
+            b.created_at,
+            u.username as created_by
+        from bookmarks b
+        join users u on b.user_id = u.user_id
+        where b.user_id = ? and b.is_archived = 0
+        and {}
+        order by b.created_at desc
+        limit ? offset ?
+        "#,
+        and_clauses.join(" and ")
+    );
+
+    let mut query_builder = sqlx::query(&sql).bind(user_id);
+
+    // Bind parameters for each term (4 binds per term: 3 for bookmark fields + 1 for tag)
+    for pattern in &patterns {
+        query_builder = query_builder
+            .bind(pattern) // bookmark title
+            .bind(pattern) // bookmark description
+            .bind(pattern) // bookmark url
+            .bind(pattern); // tag name
+    }
+
+    query_builder = query_builder.bind(limit).bind(offset);
+
+    let bookmarks = query_builder.fetch_all(pool).await?;
+
+    let bookmarks: Vec<BookmarkQueryResult> = bookmarks
+        .into_iter()
+        .map(|row| BookmarkQueryResult {
+            bookmark_id: row.get("bookmark_id"),
+            url: row.get("url"),
+            title: row.get("title"),
+            description: row.get("description"),
+            created_at: row.get("created_at"),
+            created_by: row.get("created_by"),
+        })
+        .collect();
 
     build_bookmark_results(pool, bookmarks).await
 }

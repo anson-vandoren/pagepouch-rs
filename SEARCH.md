@@ -186,13 +186,3 @@ exactly what tags they have used before, hence fuzzy-matching.
 - Tag validity is determined by presence in dropdown results: if a tag appears in fuzzy-match results, it exists and can be committed.
 - When a tag is not "committed", it shall not be used to filter results. Only tags that are committed, removed from the search input,
   and added to the tag filter list shall be used to filter results.
-
-## TODOs found during dev
-
-For each of these bugs, create one or more test case(s), verify failing, fix, verify passing.
-
-- `api and web` finds links that have tags `api` AND (`web-dev` OR `web-framework`), which is correct, however
-  `api and web-` finds links that have tags `api` AND `web-dev`, but not links that have `api` AND `web-framework`,
-  which is perplexing and incorrect. Even more confusingly, `rust and web-` correctly finds both cases :thinking:.
-  This is still broken even with `test_partial_tag_search_bug`.
-- Search terms inside of quotes (single or double) should only match exactly, not fuzzy-matching

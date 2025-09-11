@@ -347,10 +347,17 @@ class TagCompletion {
   }
 
   /**
+   * Check if dropdown is currently visible
+   */
+  get isDropdownVisible() {
+    return this.suggestionsDiv.style.display !== 'none';
+  }
+
+  /**
    * Handle keyboard navigation in dropdown
    */
   async handleKeyNavigation(event) {
-    const hasDropdown = this.suggestionsDiv.style.display !== 'none';
+    const hasDropdown = this.isDropdownVisible;
 
     switch (event.key) {
       case 'ArrowDown':
@@ -419,16 +426,6 @@ class TagCompletion {
     this.updateTagTextFromSelection();
   }
 
-  /**
-   * Handle Tab/Shift+Tab navigation
-   */
-  handleTabNavigation(event) {
-    if (!event.shiftKey) {
-      this.navigateDown();
-    } else {
-      this.navigateUp();
-    }
-  }
 
   /**
    * Handle Enter key - commit selected tag
@@ -449,7 +446,7 @@ class TagCompletion {
    */
   handleEscapeKey(_event) {
     const hasSelection = this.selectedSuggestionIndex >= 0;
-    const isDropdownOpen = this.suggestionsDiv.style.display !== 'none';
+    const isDropdownOpen = this.isDropdownVisible;
 
     if (hasSelection) {
       // First escape unselects
@@ -697,7 +694,6 @@ class TagCompletion {
 
     this.isUpdatingTags = true;
     try {
-      const tagsToDeactivate = Array.from(this.committedTags);
       this.committedTags.clear();
       this.unhighlightBookmarkTags();
       this.triggerSearchWithCommittedTags();
@@ -723,81 +719,51 @@ class TagCompletion {
     }
   }
 
-  ensureTagsContainers() {
-    let isOk = true;
-    if (!this.inactiveTagsContainer) {
-      this.inactiveTagsContainer = document.getElementById('inactive-tags');
-      if (!this.inactiveTagsContainer) {
-        console.error('Inactive tags container not found');
-        isOk = false;
-      }
-    }
-    if (!this.activeTagsContainer) {
-      this.activeTagsContainer = document.getElementById('active-tags');
-      if (!this.activeTagsContainer) {
-        console.error('Active tags container not found');
-        isOk = false;
-      }
-    }
-    if (!this.bookmarkContent) {
-      this.bookmarkContent = document.getElementById('bookmark-content');
-      if (!this.bookmarkContent) {
-        console.error('Bookmark content container not found');
-        isOk = false;
-      }
-    }
-
-    return isOk;
-  }
 
   /**
-   * Highlight all bookmark tags that match the currently active filters
-   * @param {string} tagName - Name of the tag to highlight (optional - highlights all if not provided)
+   * Highlight or unhighlight bookmark tags
+   * @param {string|null} tagName - Tag to highlight/unhighlight (null for all)
+   * @param {boolean} highlight - True to highlight, false to unhighlight
    */
-  highlightMatchingBookmarkTags(tagName = null) {
+  updateBookmarkTagHighlight(tagName = null, highlight = true) {
     if (!this.bookmarkContent) {
       console.warn('Bookmark content container not found');
       return;
     }
 
-    const tagsToHighlight = tagName ? [tagName] : Array.from(this.committedTags);
-
-    tagsToHighlight.forEach((tag) => {
-      // Find all bookmark tags with this name
-      const bookmarkTags = this.bookmarkContent.querySelectorAll('.tag');
-      bookmarkTags.forEach((tagElement) => {
-        if (tagElement.textContent.trim() === tag) {
-          tagElement.classList.add('tag-highlighted');
-        }
+    if (highlight) {
+      const tagsToHighlight = tagName ? [tagName] : Array.from(this.committedTags);
+      tagsToHighlight.forEach((tag) => {
+        this.bookmarkContent.querySelectorAll('.tag').forEach((tagElement) => {
+          if (tagElement.textContent.trim() === tag) {
+            tagElement.classList.add('tag-highlighted');
+          }
+        });
       });
-    });
-  }
-
-  /**
-   * Remove highlighting from bookmark tags
-   * @param {string} tagName - Name of the tag to unhighlight (optional - removes all if not provided)
-   */
-  unhighlightBookmarkTags(tagName = null) {
-    if (!this.bookmarkContent) {
-      console.warn('Bookmark content container not found');
-      return;
-    }
-
-    if (tagName) {
-      // Remove highlighting from specific tag
-      const bookmarkTags = this.bookmarkContent.querySelectorAll('.tag');
-      bookmarkTags.forEach((tagElement) => {
-        if (tagElement.textContent.trim() === tagName) {
+    } else {
+      const selector = tagName ? '.tag' : '.tag.tag-highlighted';
+      this.bookmarkContent.querySelectorAll(selector).forEach((tagElement) => {
+        if (!tagName || tagElement.textContent.trim() === tagName) {
           tagElement.classList.remove('tag-highlighted');
         }
       });
-    } else {
-      // Remove highlighting from all tags
-      const highlightedTags = this.bookmarkContent.querySelectorAll('.tag.tag-highlighted');
-      highlightedTags.forEach((tagElement) => {
-        tagElement.classList.remove('tag-highlighted');
-      });
     }
+  }
+
+  /**
+   * Highlight bookmark tags (convenience method)
+   * @param {string} tagName - Name of the tag to highlight (optional - highlights all if not provided)
+   */
+  highlightMatchingBookmarkTags(tagName = null) {
+    this.updateBookmarkTagHighlight(tagName, true);
+  }
+
+  /**
+   * Remove highlighting from bookmark tags (convenience method)
+   * @param {string} tagName - Name of the tag to unhighlight (optional - removes all if not provided)
+   */
+  unhighlightBookmarkTags(tagName = null) {
+    this.updateBookmarkTagHighlight(tagName, false);
   }
 
   /**

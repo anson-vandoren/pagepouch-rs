@@ -249,15 +249,10 @@ pub async fn search_user_bookmarks(
 
     let mut result = Vec::new();
     for bookmark in bookmarks {
-        let tags = if let Some(tag_names) = bookmark.tag_names {
-            if tag_names.is_empty() {
-                Vec::new()
-            } else {
-                tag_names.split(',').map(|name| TagInfo { name: name.to_string() }).collect()
-            }
-        } else {
-            Vec::new()
-        };
+        let tags = bookmark.tag_names.unwrap_or_default();
+        let mut tags = tags.split(',').collect::<Vec<_>>();
+        tags.sort_unstable();
+        let tags = tags.into_iter().map(TagInfo::from).collect();
 
         let formatted_date = format_timestamp(bookmark.created_at);
 

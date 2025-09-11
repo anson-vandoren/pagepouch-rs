@@ -156,7 +156,7 @@ pub async fn from_token(pool: &SqlitePool, session_token: SessionToken, signed_t
         return Err(AppError::unauthorized(anyhow!("User session expired")));
     }
 
-    let user = db::users::get_by_id(pool, record.user_id).await?;
+    let user = db::users::get_by_id(&mut tx, record.user_id).await?;
     tx.commit().await?;
     Ok(SessionLookup { user, signed_token })
 }

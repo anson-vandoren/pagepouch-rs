@@ -4,7 +4,7 @@ use argon2::{
     Argon2, PasswordHash, PasswordVerifier as _,
     password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
 };
-use sqlx::SqlitePool;
+use sqlx::{SqliteConnection, SqlitePool};
 use uuid::Uuid;
 
 use crate::error::AppError;
@@ -67,7 +67,7 @@ pub async fn check_username_password(pool: &SqlitePool, username: String, passwo
 /// Returns an error if:
 /// - User doesn't exist (`SqliteError::RowNotFound`)
 /// - Database query fails
-pub async fn get_by_id(pool: &SqlitePool, user_id: Uuid) -> Result<User, AppError> {
+pub async fn get_by_id(pool: &mut SqliteConnection, user_id: Uuid) -> Result<User, AppError> {
     let record = sqlx::query!(
         r#"
             select
@@ -79,7 +79,7 @@ pub async fn get_by_id(pool: &SqlitePool, user_id: Uuid) -> Result<User, AppErro
         "#,
         user_id
     )
-    .fetch_one(pool)
+    .fetch_one(&mut *pool)
     .await?;
 
     Ok(User {

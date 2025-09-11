@@ -11,22 +11,6 @@ Based on comprehensive analysis of the database code in `src/db/` and related fi
 - **Priority**: MEDIUM
 - **Fix**: Add migration to update the foreign key constraint
 
-### ❌ **NEEDS FIX** - Transaction Management Missing
-
-- **Issue**: `create_bookmark()` performs multiple INSERT operations without transactions
-- **Risk**: Partial bookmark creation if tag insertion fails
-- **Location**: `src/db/bookmarks.rs:303-344`
-- **Priority**: HIGH
-- **Fix**: Wrap in transaction:
-
-```rust
-let mut tx = pool.begin().await?;
-// Insert bookmark
-// Insert tags
-// Link bookmark to tags
-tx.commit().await?;
-```
-
 ## **PERFORMANCE OPTIMIZATIONS** 🚀
 
 ### ⚠️ **SUBOPTIMAL** - Index Optimizations
@@ -65,15 +49,10 @@ CREATE INDEX idx_bookmarks_search ON bookmarks(user_id, is_archived, title, desc
 
 ## **SUMMARY RECOMMENDATIONS BY PRIORITY**
 
-### **IMMEDIATE** (Safety/Critical)
-
-1. ❌ Add transactions to `create_bookmark()`
-
 ### **HIGH PRIORITY** (Correctness)
 
-1. ❌ Solve N+1 query problem in bookmark fetching
-2. ❌ Add missing foreign key cascades
-3. ❌ Move tag filtering to SQL
+1. ❌ Add missing foreign key cascades
+2. ❌ Move tag filtering to SQL
 
 ### **MEDIUM PRIORITY** (Performance)
 

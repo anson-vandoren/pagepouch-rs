@@ -287,6 +287,9 @@ pub async fn create_bookmark(
     description: Option<&str>,
     tag_names: &[String],
 ) -> Result<Vec<u8>> {
+    // Begin transaction to ensure atomicity
+    let mut tx = pool.begin().await?;
+
     // Insert bookmark and get the generated bookmark_id
     let bookmark_result = sqlx::query!(
         r#"
@@ -299,7 +302,7 @@ pub async fn create_bookmark(
         title,
         description
     )
-    .fetch_one(pool)
+    .fetch_one(&mut *tx)
     .await?;
 
     let bookmark_id = &bookmark_result.bookmark_id;
@@ -310,14 +313,17 @@ pub async fn create_bookmark(
             continue;
         }
 
-        // Get or create the tag
-        let tag_id = db::tags::get_or_create_tag(pool, tag_name).await?;
+        // Get or create the tag within the transaction
+        let tag_id = db::tags::get_or_create_tag(&mut tx, tag_name).await?;
 
         // Link bookmark to tag
         sqlx::query!("insert into bookmark_tags (bookmark_id, tag_id) values (?, ?)", bookmark_id, tag_id)
-            .execute(pool)
+            .execute(&mut *tx)
             .await?;
     }
+
+    // Commit the transaction
+    tx.commit().await?;
 
     Ok(bookmark_id.clone())
 }

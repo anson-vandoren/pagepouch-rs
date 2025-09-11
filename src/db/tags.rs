@@ -1,7 +1,7 @@
 //! Tag database operations.
 
 use anyhow::Result;
-use sqlx::{Row, SqlitePool};
+use sqlx::{Row, SqliteConnection, SqlitePool};
 
 use crate::db::bookmarks::TagInfo;
 
@@ -35,13 +35,13 @@ pub async fn get_user_tags(pool: &SqlitePool, user_id: uuid::Uuid) -> Result<Vec
 /// # Errors
 ///
 /// Returns an error if database operations fail.
-pub async fn get_or_create_tag(pool: &SqlitePool, name: &str) -> Result<Vec<u8>> {
+pub async fn get_or_create_tag(tx: &mut SqliteConnection, name: &str) -> Result<Vec<u8>> {
     // Normalize tag name (lowercase, trimmed)
     let normalized_name = name.trim().to_lowercase();
 
     // Try to find existing tag
     if let Some(existing) = sqlx::query!("select tag_id from tags where name = ?", normalized_name)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *tx)
         .await?
     {
         return Ok(existing.tag_id);
@@ -49,7 +49,7 @@ pub async fn get_or_create_tag(pool: &SqlitePool, name: &str) -> Result<Vec<u8>>
 
     // Create new tag
     let result = sqlx::query!("insert into tags (name) values (?) returning tag_id", normalized_name,)
-        .fetch_one(pool)
+        .fetch_one(&mut *tx)
         .await?;
 
     Ok(result.tag_id)

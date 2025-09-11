@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        select distinct\n            b.bookmark_id,\n            b.url,\n            b.title,\n            b.created_at,\n            u.username as created_by,\n            GROUP_CONCAT(t2.name, ',') as tag_names\n        from bookmarks b\n        join users u on b.user_id = u.user_id\n        left join bookmark_tags bt_search on b.bookmark_id = bt_search.bookmark_id\n        left join tags t_search on bt_search.tag_id = t_search.tag_id\n        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id\n        left join tags t2 on bt.tag_id = t2.tag_id\n        where\n            b.user_id = ?\n            and b.is_archived = 0\n            and (\n                instr(b.title, ?) > 0 or\n                instr(b.description, ?) > 0 or\n                instr(b.url, ?) > 0 or\n                instr(t_search.name, ?) > 0\n            )\n        group by\n            b.bookmark_id,\n            b.url,\n            b.title,\n            b.created_at,\n            u.username\n        order by b.created_at desc\n        limit ? offset ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "bookmark_id",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "url",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "title",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "created_by",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "tag_names",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "449782d8c13316ad857e50b21b22e2a23b7871807143d836f22f7af52b687abf"
+}

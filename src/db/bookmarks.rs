@@ -26,17 +26,14 @@ pub struct TagInfo {
     pub name: String,
 }
 
-/// Raw bookmark result from database queries (without tags).
-#[derive(Debug, sqlx::FromRow)]
-struct BookmarkQueryResult {
-    bookmark_id: Vec<u8>,
-    url: String,
-    title: String,
-    created_at: i64,
-    created_by: String,
+impl From<&str> for TagInfo {
+    fn from(value: &str) -> Self {
+        Self { name: value.to_string() }
+    }
 }
 
 /// Retrieves bookmarks for a user with basic filtering.
+/// Optimized to avoid N+1 queries using `GROUP_CONCAT`.
 ///
 /// # Errors
 ///
@@ -49,12 +46,15 @@ pub async fn get_user_bookmarks(pool: &SqlitePool, user_id: Uuid, limit: i64, of
             b.url,
             b.title,
             b.created_at,
-            u.username as created_by
+            u.username as created_by,
+            GROUP_CONCAT(t.name, ',') as tag_names
         from bookmarks b
         join users u on b.user_id = u.user_id
-        where b.user_id = ? and b.is_archived = 0
-        order by b.created_at desc
-        limit ? offset ?
+        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
+        left join tags t on bt.tag_id = t.tag_id
+        where b.user_id = $1 and b.is_archived = 0
+        group by b.bookmark_id, b.url, b.title, b.created_at, u.username
+        limit $2 offset $3
         "#,
         user_id,
         limit,
@@ -65,21 +65,10 @@ pub async fn get_user_bookmarks(pool: &SqlitePool, user_id: Uuid, limit: i64, of
 
     let mut result = Vec::new();
     for bookmark in bookmarks {
-        // Get tags for this bookmark
-        let tags = sqlx::query!(
-            r#"
-            select t.name
-            from bookmark_tags bt
-            join tags t on bt.tag_id = t.tag_id
-            where bt.bookmark_id = ?
-            order by t.name
-            "#,
-            bookmark.bookmark_id
-        )
-        .fetch_all(pool)
-        .await?;
-
-        let tag_infos: Vec<TagInfo> = tags.into_iter().map(|tag| TagInfo { name: tag.name }).collect();
+        let tags = bookmark.tag_names.unwrap_or_default();
+        let mut tags = tags.split(',').collect::<Vec<_>>();
+        tags.sort_unstable();
+        let tags = tags.into_iter().map(TagInfo::from).collect();
 
         let formatted_date = format_timestamp(bookmark.created_at);
 
@@ -89,7 +78,7 @@ pub async fn get_user_bookmarks(pool: &SqlitePool, user_id: Uuid, limit: i64, of
             created_at: bookmark.created_at,
             formatted_date,
             created_by: bookmark.created_by,
-            tags: tag_infos,
+            tags,
         });
     }
 
@@ -111,18 +100,21 @@ pub async fn get_user_bookmarks_by_tag(
     let tag_pattern = format!("%{tag_name}%");
     let bookmarks = sqlx::query!(
         r#"
-        select
+        select distinct
             b.bookmark_id,
             b.url,
             b.title,
             b.created_at,
-            u.username as created_by
+            u.username as created_by,
+            GROUP_CONCAT(t2.name, ',') as tag_names
         from bookmarks b
         join users u on b.user_id = u.user_id
-        join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
-        join tags t on bt.tag_id = t.tag_id
-        where b.user_id = $1 and b.is_archived = 0 and t.name like $2
-        order by b.created_at desc
+        join bookmark_tags bt_filter on b.bookmark_id = bt_filter.bookmark_id
+        join tags t_filter on bt_filter.tag_id = t_filter.tag_id
+        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
+        left join tags t2 on bt.tag_id = t2.tag_id
+        where b.user_id = $1 and b.is_archived = 0 and t_filter.name like $2
+        group by b.bookmark_id, b.url, b.title, b.created_at, u.username
         limit $3 offset $4
         "#,
         user_id,
@@ -135,21 +127,10 @@ pub async fn get_user_bookmarks_by_tag(
 
     let mut result = Vec::new();
     for bookmark in bookmarks {
-        // Get all tags for this bookmark
-        let tags = sqlx::query!(
-            r#"
-            select t.name
-            from bookmark_tags bt
-            join tags t on bt.tag_id = t.tag_id
-            where bt.bookmark_id = ?
-            order by t.name
-            "#,
-            bookmark.bookmark_id
-        )
-        .fetch_all(pool)
-        .await?;
-
-        let tag_infos: Vec<TagInfo> = tags.into_iter().map(|tag| TagInfo { name: tag.name }).collect();
+        let tags = bookmark.tag_names.unwrap_or_default();
+        let mut tags = tags.split(',').collect::<Vec<_>>();
+        tags.sort_unstable();
+        let tags = tags.into_iter().map(TagInfo::from).collect();
 
         let formatted_date = format_timestamp(bookmark.created_at);
 
@@ -159,7 +140,7 @@ pub async fn get_user_bookmarks_by_tag(
             created_at: bookmark.created_at,
             formatted_date,
             created_by: bookmark.created_by,
-            tags: tag_infos,
+            tags,
         });
     }
 
@@ -236,18 +217,22 @@ pub async fn search_user_bookmarks(
             b.url,
             b.title,
             b.created_at,
-            u.username as created_by
+            u.username as created_by,
+            GROUP_CONCAT(t2.name, ',') as tag_names
         from bookmarks b
         join users u on b.user_id = u.user_id
+        left join bookmark_tags bt_search on b.bookmark_id = bt_search.bookmark_id
+        left join tags t_search on bt_search.tag_id = t_search.tag_id
         left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
-        left join tags t on bt.tag_id = t.tag_id
+        left join tags t2 on bt.tag_id = t2.tag_id
         where b.user_id = ? and b.is_archived = 0
         and (
             b.title like ? or
             b.description like ? or
             b.url like ? or
-            t.name like ?
+            t_search.name like ?
         )
+        group by b.bookmark_id, b.url, b.title, b.created_at, u.username
         order by b.created_at desc
         limit ? offset ?
         "#,
@@ -264,21 +249,15 @@ pub async fn search_user_bookmarks(
 
     let mut result = Vec::new();
     for bookmark in bookmarks {
-        // Get tags for this bookmark
-        let tags = sqlx::query!(
-            r#"
-            select t.name
-            from bookmark_tags bt
-            join tags t on bt.tag_id = t.tag_id
-            where bt.bookmark_id = ?
-            order by t.name
-            "#,
-            bookmark.bookmark_id
-        )
-        .fetch_all(pool)
-        .await?;
-
-        let tag_infos: Vec<TagInfo> = tags.into_iter().map(|tag| TagInfo { name: tag.name }).collect();
+        let tags = if let Some(tag_names) = bookmark.tag_names {
+            if tag_names.is_empty() {
+                Vec::new()
+            } else {
+                tag_names.split(',').map(|name| TagInfo { name: name.to_string() }).collect()
+            }
+        } else {
+            Vec::new()
+        };
 
         let formatted_date = format_timestamp(bookmark.created_at);
 
@@ -288,7 +267,7 @@ pub async fn search_user_bookmarks(
             created_at: bookmark.created_at,
             formatted_date,
             created_by: bookmark.created_by,
-            tags: tag_infos,
+            tags,
         });
     }
 
@@ -345,81 +324,136 @@ pub async fn create_bookmark(
 
 /// Searches for bookmarks with a single search term.
 async fn search_single_term(pool: &SqlitePool, user_id: Uuid, term: &SearchTerm, limit: i64, offset: i64) -> Result<Vec<BookmarkWithTags>> {
-    let bookmarks = match term {
-        SearchTerm::Word(word) => {
-            let search_pattern = format!("%{word}%");
-            sqlx::query_as!(
-                BookmarkQueryResult,
-                r#"
-                select distinct
-                    b.bookmark_id,
-                    b.url,
-                    b.title,
-                    b.created_at,
-                    u.username as created_by
-                from bookmarks b
-                join users u on b.user_id = u.user_id
-                left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
-                left join tags t on bt.tag_id = t.tag_id
-                where b.user_id = ? and b.is_archived = 0
-                and (
-                    b.title like ? or
-                    b.description like ? or
-                    b.url like ? or
-                    t.name like ?
-                )
-                order by b.created_at desc
-                limit ? offset ?
-                "#,
-                user_id,
-                search_pattern,
-                search_pattern,
-                search_pattern,
-                search_pattern,
-                limit,
-                offset
-            )
-            .fetch_all(pool)
-            .await?
-        }
-        SearchTerm::Phrase(phrase) => {
-            sqlx::query_as!(
-                BookmarkQueryResult,
-                r#"
-                select distinct
-                    b.bookmark_id,
-                    b.url,
-                    b.title,
-                    b.created_at,
-                    u.username as created_by
-                from bookmarks b
-                join users u on b.user_id = u.user_id
-                left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
-                left join tags t on bt.tag_id = t.tag_id
-                where b.user_id = ? and b.is_archived = 0
-                and (
-                    instr(b.title, ?) > 0 or
-                    instr(b.description, ?) > 0 or
-                    instr(b.url, ?) > 0 or
-                    instr(t.name, ?) > 0
-                )
-                order by b.created_at desc
-                limit ? offset ?
-                "#,
-                user_id,
-                phrase,
-                phrase,
-                phrase,
-                phrase,
-                limit,
-                offset
-            )
-            .fetch_all(pool)
-            .await?
-        }
-    };
+    match term {
+        SearchTerm::Word(word) => search_single_word(pool, user_id, word, limit, offset).await,
+        SearchTerm::Phrase(phrase) => search_single_phrase(pool, user_id, phrase, limit, offset).await,
+    }
+}
 
-    build_bookmark_results(pool, bookmarks).await
+async fn search_single_word(pool: &SqlitePool, user_id: Uuid, word: &str, limit: i64, offset: i64) -> Result<Vec<BookmarkWithTags>> {
+    let search_pattern = format!("%{word}%");
+    let res = sqlx::query!(
+        r#"
+        select distinct
+            b.bookmark_id,
+            b.url,
+            b.title,
+            b.created_at,
+            u.username as created_by,
+            GROUP_CONCAT(t2.name, ',') as tag_names
+        from bookmarks b
+        join users u on b.user_id = u.user_id
+        left join bookmark_tags bt_search on b.bookmark_id = bt_search.bookmark_id
+        left join tags t_search on bt_search.tag_id = t_search.tag_id
+        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
+        left join tags t2 on bt.tag_id = t2.tag_id
+        where b.user_id = ? and b.is_archived = 0
+        and (
+            b.title like ? or
+            b.description like ? or
+            b.url like ? or
+            t_search.name like ?
+        )
+        group by b.bookmark_id, b.url, b.title, b.created_at, u.username
+        order by b.created_at desc
+        limit ? offset ?
+        "#,
+        user_id,
+        search_pattern,
+        search_pattern,
+        search_pattern,
+        search_pattern,
+        limit,
+        offset
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(res
+        .into_iter()
+        .map(|record| {
+            let tags = record.tag_names.unwrap_or_default();
+            let mut tags = tags.split(',').collect::<Vec<_>>();
+            tags.sort_unstable();
+            let tags = tags.into_iter().map(TagInfo::from).collect();
+
+            let formatted_date = format_timestamp(record.created_at);
+            BookmarkWithTags {
+                url: record.url,
+                title: record.title,
+                created_at: record.created_at,
+                formatted_date,
+                created_by: record.created_by,
+                tags,
+            }
+        })
+        .collect())
+}
+
+async fn search_single_phrase(pool: &SqlitePool, user_id: Uuid, phrase: &str, limit: i64, offset: i64) -> Result<Vec<BookmarkWithTags>> {
+    let res = sqlx::query!(
+        r#"
+        select distinct
+            b.bookmark_id,
+            b.url,
+            b.title,
+            b.created_at,
+            u.username as created_by,
+            GROUP_CONCAT(t2.name, ',') as tag_names
+        from bookmarks b
+        join users u on b.user_id = u.user_id
+        left join bookmark_tags bt_search on b.bookmark_id = bt_search.bookmark_id
+        left join tags t_search on bt_search.tag_id = t_search.tag_id
+        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
+        left join tags t2 on bt.tag_id = t2.tag_id
+        where
+            b.user_id = ?
+            and b.is_archived = 0
+            and (
+                instr(b.title, ?) > 0 or
+                instr(b.description, ?) > 0 or
+                instr(b.url, ?) > 0 or
+                instr(t_search.name, ?) > 0
+            )
+        group by
+            b.bookmark_id,
+            b.url,
+            b.title,
+            b.created_at,
+            u.username
+        order by b.created_at desc
+        limit ? offset ?
+        "#,
+        user_id,
+        phrase,
+        phrase,
+        phrase,
+        phrase,
+        limit,
+        offset
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(res
+        .into_iter()
+        .map(|record| {
+            let tags = record.tag_names.unwrap_or_default();
+            let mut tags = tags.split(',').collect::<Vec<_>>();
+            tags.sort_unstable();
+            let tags = tags.into_iter().map(TagInfo::from).collect();
+
+            let formatted_date = format_timestamp(record.created_at);
+            BookmarkWithTags {
+                url: record.url,
+                title: record.title,
+                created_at: record.created_at,
+                formatted_date,
+                created_by: record.created_by,
+                tags,
+            }
+        })
+        .collect())
 }
 
 /// Searches for bookmarks with two terms using OR logic.
@@ -432,12 +466,16 @@ async fn search_two_terms_or(
 ) -> Result<Vec<BookmarkWithTags>> {
     // Build the WHERE conditions based on term types
     let condition1 = match &terms[0] {
-        SearchTerm::Word(_) => "(b.title like ? or b.description like ? or b.url like ? or t.name like ?)",
-        SearchTerm::Phrase(_) => "(instr(b.title, ?) > 0 or instr(b.description, ?) > 0 or instr(b.url, ?) > 0 or instr(t.name, ?) > 0)",
+        SearchTerm::Word(_) => "(b.title like ? or b.description like ? or b.url like ? or t_search.name like ?)",
+        SearchTerm::Phrase(_) => {
+            "(instr(b.title, ?) > 0 or instr(b.description, ?) > 0 or instr(b.url, ?) > 0 or instr(t_search.name, ?) > 0)"
+        }
     };
     let condition2 = match &terms[1] {
-        SearchTerm::Word(_) => "(b.title like ? or b.description like ? or b.url like ? or t.name like ?)",
-        SearchTerm::Phrase(_) => "(instr(b.title, ?) > 0 or instr(b.description, ?) > 0 or instr(b.url, ?) > 0 or instr(t.name, ?) > 0)",
+        SearchTerm::Word(_) => "(b.title like ? or b.description like ? or b.url like ? or t_search.name like ?)",
+        SearchTerm::Phrase(_) => {
+            "(instr(b.title, ?) > 0 or instr(b.description, ?) > 0 or instr(b.url, ?) > 0 or instr(t_search.name, ?) > 0)"
+        }
     };
 
     let pattern1 = match &terms[0] {
@@ -456,18 +494,24 @@ async fn search_two_terms_or(
             b.url,
             b.title,
             b.created_at,
-            u.username as created_by
+            u.username as created_by,
+            GROUP_CONCAT(t2.name, ',') as tag_names
         from bookmarks b
         join users u on b.user_id = u.user_id
+        left join bookmark_tags bt_search on b.bookmark_id = bt_search.bookmark_id
+        left join tags t_search on bt_search.tag_id = t_search.tag_id
         left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
-        left join tags t on bt.tag_id = t.tag_id
+        left join tags t2 on bt.tag_id = t2.tag_id
         where b.user_id = ? and b.is_archived = 0
         and ({condition1} or {condition2})
+        group by b.bookmark_id, b.url, b.title, b.created_at, u.username
         order by b.created_at desc
         limit ? offset ?
         "
     );
 
+    // TODO: querybuilder instead?
+    // TODO: query_as for all these
     let bookmarks = sqlx::query(&sql)
         .bind(user_id)
         .bind(&pattern1)
@@ -483,18 +527,28 @@ async fn search_two_terms_or(
         .fetch_all(pool)
         .await?;
 
-    let bookmarks: Vec<BookmarkQueryResult> = bookmarks
-        .into_iter()
-        .map(|row| BookmarkQueryResult {
-            bookmark_id: row.get("bookmark_id"),
+    let mut result = Vec::new();
+    for row in bookmarks {
+        let tag_names: Option<String> = row.get("tag_names");
+        let tags = tag_names.unwrap_or_default();
+        let mut tags = tags.split(',').collect::<Vec<_>>();
+        tags.sort_unstable();
+        let tags = tags.into_iter().map(TagInfo::from).collect();
+
+        let created_at: i64 = row.get("created_at");
+        let formatted_date = format_timestamp(created_at);
+
+        result.push(BookmarkWithTags {
             url: row.get("url"),
             title: row.get("title"),
-            created_at: row.get("created_at"),
+            created_at,
+            formatted_date,
             created_by: row.get("created_by"),
-        })
-        .collect();
+            tags,
+        });
+    }
 
-    build_bookmark_results(pool, bookmarks).await
+    Ok(result)
 }
 
 /// Searches for bookmarks with multiple terms using AND logic.
@@ -549,11 +603,15 @@ async fn search_multiple_terms_and(
             b.url,
             b.title,
             b.created_at,
-            u.username as created_by
+            u.username as created_by,
+            GROUP_CONCAT(t_result.name, ',') as tag_names
         from bookmarks b
         join users u on b.user_id = u.user_id
+        left join bookmark_tags bt_result on b.bookmark_id = bt_result.bookmark_id
+        left join tags t_result on bt_result.tag_id = t_result.tag_id
         where b.user_id = ? and b.is_archived = 0
         and {}
+        group by b.bookmark_id, b.url, b.title, b.created_at, u.username
         order by b.created_at desc
         limit ? offset ?
         ",
@@ -575,49 +633,24 @@ async fn search_multiple_terms_and(
 
     let bookmarks = query_builder.fetch_all(pool).await?;
 
-    let bookmarks: Vec<BookmarkQueryResult> = bookmarks
-        .into_iter()
-        .map(|row| BookmarkQueryResult {
-            bookmark_id: row.get("bookmark_id"),
-            url: row.get("url"),
-            title: row.get("title"),
-            created_at: row.get("created_at"),
-            created_by: row.get("created_by"),
-        })
-        .collect();
-
-    build_bookmark_results(pool, bookmarks).await
-}
-
-/// Helper function to build `BookmarkWithTags` results from query results.
-async fn build_bookmark_results(pool: &SqlitePool, bookmarks: Vec<BookmarkQueryResult>) -> Result<Vec<BookmarkWithTags>> {
     let mut result = Vec::new();
-    for bookmark in bookmarks {
-        // Get tags for this bookmark
-        let tags = sqlx::query!(
-            r#"
-            select t.name
-            from bookmark_tags bt
-            join tags t on bt.tag_id = t.tag_id
-            where bt.bookmark_id = ?
-            order by t.name
-            "#,
-            bookmark.bookmark_id
-        )
-        .fetch_all(pool)
-        .await?;
+    for row in bookmarks {
+        let tag_names: Option<String> = row.get("tag_names");
+        let tags = tag_names.unwrap_or_default();
+        let mut tags = tags.split(',').collect::<Vec<_>>();
+        tags.sort_unstable();
+        let tags = tags.into_iter().map(TagInfo::from).collect();
 
-        let tag_infos: Vec<TagInfo> = tags.into_iter().map(|tag| TagInfo { name: tag.name }).collect();
-
-        let formatted_date = format_timestamp(bookmark.created_at);
+        let created_at: i64 = row.get("created_at");
+        let formatted_date = format_timestamp(created_at);
 
         result.push(BookmarkWithTags {
-            url: bookmark.url,
-            title: bookmark.title,
-            created_at: bookmark.created_at,
+            url: row.get("url"),
+            title: row.get("title"),
+            created_at,
             formatted_date,
-            created_by: bookmark.created_by,
-            tags: tag_infos,
+            created_by: row.get("created_by"),
+            tags,
         });
     }
 
@@ -650,9 +683,12 @@ pub async fn search_by_tags_only(
             b.url,
             b.title,
             b.created_at,
-            u.username as created_by
+            u.username as created_by,
+            GROUP_CONCAT(t_result.name, ',') as tag_names
         from bookmarks b
         join users u on b.user_id = u.user_id
+        left join bookmark_tags bt_result on b.bookmark_id = bt_result.bookmark_id
+        left join tags t_result on bt_result.tag_id = t_result.tag_id
         where b.user_id = ? and b.is_archived = 0
         and b.bookmark_id in (
             select bt.bookmark_id
@@ -662,6 +698,7 @@ pub async fn search_by_tags_only(
             group by bt.bookmark_id
             having count(distinct t.tag_id) >= ?
         )
+        group by b.bookmark_id, b.url, b.title, b.created_at, u.username
         order by b.created_at desc
         limit ? offset ?
         "
@@ -676,18 +713,28 @@ pub async fn search_by_tags_only(
 
     let rows = query.fetch_all(pool).await?;
 
-    let bookmarks: Vec<BookmarkQueryResult> = rows
-        .into_iter()
-        .map(|row| BookmarkQueryResult {
-            bookmark_id: row.get("bookmark_id"),
+    let mut result = Vec::new();
+    for row in rows {
+        let tag_names: Option<String> = row.get("tag_names");
+        let tags = tag_names.unwrap_or_default();
+        let mut tags = tags.split(',').collect::<Vec<_>>();
+        tags.sort_unstable();
+        let tags = tags.into_iter().map(TagInfo::from).collect();
+
+        let created_at: i64 = row.get("created_at");
+        let formatted_date = format_timestamp(created_at);
+
+        result.push(BookmarkWithTags {
             url: row.get("url"),
             title: row.get("title"),
-            created_at: row.get("created_at"),
+            created_at,
+            formatted_date,
             created_by: row.get("created_by"),
-        })
-        .collect();
+            tags,
+        });
+    }
 
-    build_bookmark_results(pool, bookmarks).await
+    Ok(result)
 }
 
 /// Filters bookmark results to only include those with all specified tags (fuzzy matching).

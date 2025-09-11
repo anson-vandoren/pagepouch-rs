@@ -72,3 +72,4 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Login page is too skinny
 - Minify CSS and JS for prod
 - Are HTMX/Askama still even the right choice here? This is much more of an app than a static page...
+- 3+ query OR terms fail. Probably needs a fix like search_multiple_terms_and

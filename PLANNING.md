@@ -73,3 +73,13 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Minify CSS and JS for prod
 - Are HTMX/Askama still even the right choice here? This is much more of an app than a static page...
 - 3+ query OR terms fail. Probably needs a fix like search_multiple_terms_and
+- Padding on tags under links needs to go smaller
+- Highlighting active tags in light mode needs a different color
+- Vertical align top of tags on the right with top of top bookmark
+- No tags still renders a little turd
+- Save & cancel on add link are different heights
+- Check settings on old app to move over
+- Use local time not UTC
+- Are links sorted by date added? seems fishy
+- Add & edit links as modals not different page nor inline
+- Sort by link count toggle + then show the count on the tag

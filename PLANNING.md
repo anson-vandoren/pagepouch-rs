@@ -60,11 +60,15 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Tags sort by alphabetical or link count (toggle)
 - Row breaks between letters of tags
 - Tag column toggle to also filter by current tag filter. Filter tags are highlighted in tag column.
-- Scrape meta description
-- Can/should we have current tags in an arc/rwlock in state, maybe, to avoid repeated DB lookup for auto-complete?
-- Search box auto-selected on page load
 - Limit the number of suggestions returned to ~10 or so, ranked.
-- Login page is too skinny
+- **Login page is too skinny**
+- **Remove logout toast**
+- **Simplify theme toggle - shouldn't be its own API call...**
+- **Theme toggle should just be a small selector, not a huge thing**
+- **Remove "more settings coming soon" thing**
+- **Remove "customize your pagepouch experience"**
+- **Make sure there's no box shadow on settings page**
+- **Make "Theme" seem like a subheading on "Appearance"**
 - Minify CSS and JS for prod
 - Are HTMX/Askama still even the right choice here? This is much more of an app than a static page...
 - 3+ query OR terms fail. Probably needs a fix like search_multiple_terms_and
@@ -75,8 +79,6 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Save & cancel on add link are different heights
 - Check settings on old app to move over
 - Use local time not UTC
-- ~~Are links sorted by date added? seems fishy~~
-- ~~Links are not in recent order??~~
 - Add & edit links as modals not different page nor inline
 - Sort by link count toggle + then show the count on the tag
 - Plan for key recovery: is it just a user reset? We should make this easy to do.
@@ -88,14 +90,12 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Configurable port
 - Consider letting NGINX handle static files instead
 - Tags on new link show up like others
-- ~~Get rid of toast for new link~~
 - Delete admin user from prod
 - Check for and remove unused CSS
 - Bundle(?) & minify JS
 - TESTS!!!
 - Remove tailscale from box, probably
 - Find all <script> tags and consolidate them
-- ~~TitleInputTemplate` has weird inline shit - do it properly~~
 - Overall project structure
 - Test that autologout works still
 - title_input.html seems like it's only there because of HTMX and we should just use JS w/ a JSON repsonse?

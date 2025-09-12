@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Rejiggered the visuals of the login card.
+
 ## [0.1.2](https://github.com/anson-vandoren/pagepouch-rs/compare/v0.1.1...v0.1.2) - 2025-09-12
 
 ### Removed

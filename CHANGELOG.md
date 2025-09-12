@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rejiggered the visuals of the login card.
 - Spruced up the settings page.
 - Simplified settings page backend to avoid extra network calls.
+- Pinned footer to the bottom of the viewport.
 
 ### Removed
 

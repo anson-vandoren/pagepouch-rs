@@ -61,15 +61,6 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Row breaks between letters of tags
 - Tag column toggle to also filter by current tag filter. Filter tags are highlighted in tag column.
 - Limit the number of suggestions returned to ~10 or so, ranked.
-- ~~Login page is too skinny~~
-- ~~Remove logout toast~~
-- ~~Simplify theme toggle - shouldn't be its own API call...~~
-- ~~Theme toggle should just be a small selector, not a huge thing~~
-- ~~Remove "more settings coming soon" thing~~
-- ~~Remove "customize your pagepouch experience"~~
-- **Make sure there's no box shadow on settings page**
-- ~~Make "Theme" seem like a subheading on "Appearance"~~
-- ~~Pin footer to the bottom of the viewport~~
 - Login card not centered L/R?
 - On larger screen, keep the bookmarks column to a reasonable width and don't let tags column get too wide
 - User settings table (theme for now).
@@ -106,3 +97,4 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Test that autologout works still
 - title_input.html seems like it's only there because of HTMX and we should just use JS w/ a JSON repsonse?
 - Lighthouse score && fixup
+- Consolidate CSS and remove the simple.css stuff we don't need

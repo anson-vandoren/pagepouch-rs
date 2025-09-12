@@ -14,7 +14,7 @@
             name="url"
             required
             placeholder="https://example.com/article"
-            hx-trigger="blur changed delay:500ms"
+            hx-trigger="blur"
             hx-post="/api/fetch-title"
             hx-target="#title"
             hx-swap="outerHTML"
@@ -75,12 +75,14 @@
   </main>
 
   <script>
-    document.addEventListener('keydown', function(e) {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    document.addEventListener("keydown", function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
-        const form = document.querySelector('form');
+        const form = document.querySelector("form");
         if (form) {
-          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+          form.dispatchEvent(
+            new Event("submit", { bubbles: true, cancelable: true }),
+          );
         }
       }
     });

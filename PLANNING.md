@@ -60,7 +60,6 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Tags sort by alphabetical or link count (toggle)
 - Row breaks between letters of tags
 - Tag column toggle to also filter by current tag filter. Filter tags are highlighted in tag column.
-- Filtered tags show up in the tag column, not the bookmarks column (see current version)
 - Scrape meta description
 - Can/should we have current tags in an arc/rwlock in state, maybe, to avoid repeated DB lookup for auto-complete?
 - Search box auto-selected on page load
@@ -89,7 +88,7 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Configurable port
 - Consider letting NGINX handle static files instead
 - Tags on new link show up like others
-- **Get rid of toast for new link**
+- ~~Get rid of toast for new link~~
 - Delete admin user from prod
 - Check for and remove unused CSS
 - Bundle(?) & minify JS
@@ -97,3 +96,7 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Remove tailscale from box, probably
 - Find all <script> tags and consolidate them
 - ~~TitleInputTemplate` has weird inline shit - do it properly~~
+- Overall project structure
+- Test that autologout works still
+- title_input.html seems like it's only there because of HTMX and we should just use JS w/ a JSON repsonse?
+- Lighthouse score && fixup

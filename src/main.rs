@@ -1,8 +1,9 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::Result;
 use axum::extract::State;
 use dotenvy::dotenv;
+use reqwest::Client;
 use sqlx::SqlitePool;
 
 use crate::{config::Config, encryption::EncryptionProvider};
@@ -23,6 +24,8 @@ pub struct AppState {
     pub encryption: EncryptionProvider,
     /// Database connection pool for `SQLite`.
     pub pool: SqlitePool,
+    /// Shared HTTP client for external requests.
+    pub http_client: Client,
 }
 
 /// Type alias for extracting the application state in request handlers.
@@ -51,7 +54,18 @@ async fn main() -> Result<()> {
     let pool = db::connect(&config.database_url).await?;
     let encryption = EncryptionProvider::new(config.root_key);
 
-    let app_state = Arc::new(AppState { encryption, pool });
+    // Create shared HTTP client with optimized settings for title fetching
+    let http_client = Client::builder()
+        .timeout(Duration::from_millis(1000))
+        .connect_timeout(Duration::from_millis(500))
+        .user_agent("PagePouch/1.0")
+        .build()?;
+
+    let app_state = Arc::new(AppState {
+        encryption,
+        pool,
+        http_client,
+    });
 
     route::serve(app_state).await?;
 

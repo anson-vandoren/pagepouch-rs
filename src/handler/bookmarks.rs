@@ -3,8 +3,10 @@
 use askama::Template;
 use axum::{Extension, Form, extract::State, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::Query;
+use reqwest::Client;
 use serde::Deserialize;
-use tracing::{debug, error, warn};
+use tl::VDom;
+use tracing::{Level, debug, error, instrument, warn};
 
 use crate::{
     ApiState,
@@ -12,7 +14,7 @@ use crate::{
         bookmarks::{self, BookmarkWithTags},
         users::User,
     },
-    handler::{AuthState, HomeTemplate, HtmlTemplate, Toast, Toasts},
+    handler::{AuthState, HomeTemplate, HtmlTemplate, Toasts},
     search::SearchQuery,
 };
 
@@ -129,6 +131,7 @@ pub struct FetchTitleRequest {
 #[derive(Template)]
 #[template(path = "components/title_input.html")]
 pub struct TitleInputTemplate {
+    pub description: Option<String>,
     pub title: String,
     pub corrected_url: String,
 }
@@ -161,35 +164,24 @@ pub async fn bookmark_create_handler(
         })
         .unwrap_or_default();
 
-    // Guess protocol if missing and update URL
-    let final_url = guess_protocol(&form.url).await;
-
     // Create the bookmark in the database
     match bookmarks::create_bookmark(
         &state.pool,
         user.user_id,
-        &final_url,
+        &form.url,
         &form.title,
         form.description.as_deref(),
         &tag_names,
     )
     .await
     {
-        Ok(_bookmark_id) => {
-            // Return home page with success toast instead of redirect
-            let success_toast = Toast {
-                is_success: true,
-                message: format!("✨ Bookmark \"{}\" saved successfully!", form.title),
-            };
-
-            HtmlTemplate(HomeTemplate {
-                title: "Home",
-                auth_state: AuthState::Authenticated,
-                toasts: vec![success_toast],
-                is_error: false,
-            })
-            .into_response()
-        }
+        Ok(_bookmark_id) => HtmlTemplate(HomeTemplate {
+            title: "Home",
+            auth_state: AuthState::Authenticated,
+            toasts: vec![],
+            is_error: false,
+        })
+        .into_response(),
         Err(err) => {
             error!("🚨 Failed to create bookmark: {}", err);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create bookmark").into_response()
@@ -197,106 +189,113 @@ pub async fn bookmark_create_handler(
     }
 }
 
-/// Handler for fetching page title from URL
-pub async fn fetch_title_handler(Form(request): Form<FetchTitleRequest>) -> impl IntoResponse {
-    // Try to guess protocol if missing
-    let url = guess_protocol(&request.url).await;
-
-    match fetch_page_title(&url).await {
-        Ok(title) => {
-            debug!(url = url, title, "Fetched title");
-            HtmlTemplate(TitleInputTemplate {
+/// Handler for fetching page title & description from URL
+pub async fn scrape_site_handler(State(state): ApiState, Form(request): Form<FetchTitleRequest>) -> impl IntoResponse {
+    match scrape_title_description(&state.http_client, &request.url).await {
+        Ok(result) => {
+            let LinkScrapeResult {
+                description,
                 title,
-                corrected_url: url.clone(),
+                final_url,
+            } = result;
+            debug!(final_url, title, description, "Scraped input site.");
+            HtmlTemplate(TitleInputTemplate {
+                description,
+                title,
+                corrected_url: final_url,
             })
         }
         Err(err) => {
-            warn!("🌐 Failed to fetch title for {}: {}", url, err);
+            warn!(url = request.url, ?err, "🌐 Failed to fetch title");
             // Return the URL as fallback title
-            let fallback_title = extract_domain_from_url(&url).unwrap_or_else(|| url.clone());
             HtmlTemplate(TitleInputTemplate {
-                title: fallback_title,
-                corrected_url: url.clone(),
+                title: request.url.clone(),
+                description: None,
+                corrected_url: request.url,
             })
         }
     }
 }
 
-/// Tries to guess the correct protocol for a URL by testing HTTPS first, then HTTP.
-async fn guess_protocol(url: &str) -> String {
-    // If URL already has a protocol, return as-is
-    if url.starts_with("http://") || url.starts_with("https://") {
-        return url.to_string();
-    }
-
-    let url_with_tls = format!("https://{url}");
-    let http_url = format!("http://{url}");
-
-    // Quick HEAD request to test HTTPS first
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_millis(800))
-        .user_agent("PagePouch/1.0")
-        .build()
-        .unwrap_or_default();
-
-    // Try HTTPS first
-    if let Ok(response) = client.head(&url_with_tls).send().await
-        && response.status().is_success()
-    {
-        debug!("🔒 Protocol guessed: HTTPS for {}", url);
-        return url_with_tls;
-    }
-
-    // Fallback to HTTP
-    debug!("🔓 Protocol guessed: HTTP for {}", url);
-    http_url
+#[derive(Debug)]
+struct LinkScrapeResult {
+    description: Option<String>,
+    title: String,
+    final_url: String,
 }
 
-/// Fetches the title from a webpage with optimizations for speed.
+/// Fetches the title from a webpage
 ///
 /// # Errors
 ///
 /// Returns an error if the HTTP request fails or HTML parsing fails.
-async fn fetch_page_title(url: &str) -> anyhow::Result<String> {
-    debug!(url, "Starting title fetch");
-
-    // Create HTTP client with aggressive timeout since title should be in head
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_millis(1000))
-        .user_agent("PagePouch/1.0")
-        .build()?;
+#[instrument(skip(client), ret(level = Level::DEBUG))]
+async fn scrape_title_description(client: &Client, url: &str) -> anyhow::Result<LinkScrapeResult> {
+    let default_title = url.to_string();
+    debug!("Starting title fetch");
+    let mut url = match url {
+        url if url.starts_with("http://") || url.starts_with("https://") => url.to_string(),
+        no_proto => format!("http://{no_proto}"),
+    };
 
     // Fetch the page
-    let response = client.get(url).send().await?;
+    let mut response = client.get(&url).send().await?;
 
     // Check if response is successful
     if !response.status().is_success() {
-        return Err(anyhow::anyhow!("HTTP error: {}", response.status()));
+        // If not, try https instead
+        debug!("Fetch failed with https, trying http");
+        url = url.replace("https://", "http://");
+        response = client.get(&url).send().await?;
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("HTTP error: {}", response.status()));
+        }
     }
 
-    // Get response text with streaming to potentially stop early
     let html = response.text().await?;
 
     // Parse HTML and extract title
     let dom = tl::parse(&html, tl::ParserOptions::default())?;
+    let parser = dom.parser();
     let title = dom
         .query_selector("title")
         .and_then(|mut iter| iter.next())
-        .and_then(|node| node.get(dom.parser()))
-        .map(|node| decode_html_entities(&node.inner_text(dom.parser())).trim().to_string())
+        .and_then(|node| node.get(parser))
+        .map(|node| decode_html_entities(&node.inner_text(parser)).trim().to_string())
         .filter(|title| !title.is_empty())
-        .unwrap_or_else(|| extract_domain_from_url(url).unwrap_or_else(|| url.to_string()));
+        .unwrap_or(default_title);
 
-    debug!(url, title, "Finished title fetch");
-    Ok(title)
+    let description = get_meta_description(&dom);
+
+    Ok(LinkScrapeResult {
+        description,
+        title,
+        final_url: url,
+    })
 }
 
-/// Extracts domain name from URL as fallback title.
-fn extract_domain_from_url(url: &str) -> Option<String> {
-    url.strip_prefix("https://")
-        .or_else(|| url.strip_prefix("http://"))
-        .and_then(|rest| rest.split('/').next())
-        .map(std::string::ToString::to_string)
+fn get_meta_description(dom: &VDom<'_>) -> Option<String> {
+    let parser = dom.parser();
+
+    // Try Open Graph description first
+    if let Some(og_desc) = dom
+        .query_selector("meta[property=\"og:description\"]")
+        .and_then(|mut iter| iter.next())
+        .and_then(|node| node.get(parser))
+        .and_then(|node| node.as_tag())
+        .and_then(|tag| tag.attributes().get("content")?)
+        .map(|content| content.as_utf8_str())
+    {
+        return Some(og_desc.to_string());
+    }
+
+    // Fall back to standard meta description
+    dom.query_selector("meta[name=\"description\"]")
+        .and_then(|mut iter| iter.next())
+        .and_then(|node| node.get(parser))
+        .and_then(|node| node.as_tag())
+        .and_then(|tag| tag.attributes().get("content")?)
+        .map(|content| content.as_utf8_str().to_string())
 }
 
 /// Decodes common HTML entities in text.

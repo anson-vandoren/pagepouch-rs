@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- Removed the success toast message when creating a new link.
+- Adding a new link will now also try to scrape a description.
+
+### Changed
+
+- Made title/description lookup much faster when creating a new link.
+
 ## [0.1.1](https://github.com/anson-vandoren/pagepouch-rs/compare/v0.1.0...v0.1.1) - 2025-09-12
 
 ### Added

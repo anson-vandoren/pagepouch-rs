@@ -54,6 +54,7 @@ pub async fn get_user_bookmarks(pool: &SqlitePool, user_id: Uuid, limit: i64, of
         left join tags t on bt.tag_id = t.tag_id
         where b.user_id = $1 and b.is_archived = 0
         group by b.bookmark_id, b.url, b.title, b.created_at, u.username
+        order by b.created_at desc
         limit $2 offset $3
         "#,
         user_id,
@@ -115,6 +116,7 @@ pub async fn get_user_bookmarks_by_tag(
         left join tags t2 on bt.tag_id = t2.tag_id
         where b.user_id = $1 and b.is_archived = 0 and t_filter.name like $2
         group by b.bookmark_id, b.url, b.title, b.created_at, u.username
+        order by b.created_at desc
         limit $3 offset $4
         "#,
         user_id,

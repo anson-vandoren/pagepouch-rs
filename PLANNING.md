@@ -75,8 +75,8 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Save & cancel on add link are different heights
 - Check settings on old app to move over
 - Use local time not UTC
-- **Are links sorted by date added? seems fishy**
-- **Links are not in recent order??**
+- ~~Are links sorted by date added? seems fishy~~
+- ~~Links are not in recent order??~~
 - Add & edit links as modals not different page nor inline
 - Sort by link count toggle + then show the count on the tag
 - Plan for key recovery: is it just a user reset? We should make this easy to do.

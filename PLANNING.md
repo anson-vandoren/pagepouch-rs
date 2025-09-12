@@ -55,10 +55,7 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Option per-user to share public links at $URL/my_links/${username}\_${nanoid}
 - View-only users
 - Move all inline `<script>` JS to separate files?
-- Convert JS to hyperscript?
 - Numbers on tags showing how many links.
-- Tag cloud also filters by active tags, or else shows highlighted which tags are active. Probably the first
-- Typeahead for tags, don't add the tag until completed (by space or tab or enter(?))
 - Should typeahead and real-time searching be via websockets instead? Discuss
 - Tags sort by alphabetical or link count (toggle)
 - Row breaks between letters of tags
@@ -79,7 +76,8 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Save & cancel on add link are different heights
 - Check settings on old app to move over
 - Use local time not UTC
-- Are links sorted by date added? seems fishy
+- **Are links sorted by date added? seems fishy**
+- **Links are not in recent order??**
 - Add & edit links as modals not different page nor inline
 - Sort by link count toggle + then show the count on the tag
 - Plan for key recovery: is it just a user reset? We should make this easy to do.
@@ -91,12 +89,11 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Configurable port
 - Consider letting NGINX handle static files instead
 - Tags on new link show up like others
-- Get rid of toast for new link
-- Links are not in recent order??
+- **Get rid of toast for new link**
 - Delete admin user from prod
 - Check for and remove unused CSS
 - Bundle(?) & minify JS
 - TESTS!!!
 - Remove tailscale from box, probably
 - Find all <script> tags and consolidate them
-- `TitleInputTemplate` has weird inline shit - do it properly
+- ~~TitleInputTemplate` has weird inline shit - do it properly~~

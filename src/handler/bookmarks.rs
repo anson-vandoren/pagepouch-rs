@@ -127,17 +127,7 @@ pub struct FetchTitleRequest {
 }
 
 #[derive(Template)]
-#[template(
-    source = r#"<input type="text" id="title" name="title" required value="{{ title }}">
-<script>
-// Update URL field if protocol was guessed
-const urlField = document.getElementById('url');
-if (urlField && '{{ corrected_url }}' !== urlField.value) {
-    urlField.value = '{{ corrected_url }}';
-}
-</script>"#,
-    ext = "html"
-)]
+#[template(path = "components/title_input.html")]
 pub struct TitleInputTemplate {
     pub title: String,
     pub corrected_url: String,

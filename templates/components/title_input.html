@@ -1,0 +1,8 @@
+<input type="text" id="title" name="title" required value="{{ title }}">
+<script>
+// Update URL field if protocol was guessed
+const urlField = document.getElementById('url');
+if (urlField && '{{ corrected_url }}' !== urlField.value) {
+    urlField.value = '{{ corrected_url }}';
+}
+</script>

@@ -124,14 +124,30 @@ update_changelog() {
     local temp_file
     temp_file=$(mktemp)
     
-    # Add everything up to and including the [Unreleased] line
+    # Add everything up to and including the [Unreleased] line, then add blank line
     awk '/^## \[Unreleased\]/ {print; print ""; exit} {print}' CHANGELOG.md > "$temp_file"
     
-    # Add the new release section
+    # Add the new release section with proper spacing
     echo "## [${new_version}](${comparison_link}) - ${current_date}" >> "$temp_file"
+    echo "" >> "$temp_file"
     
-    # Add the unreleased content (skip empty lines at the start)
-    awk '/^## \[Unreleased\]/ {found=1; next} found && /^## / {exit} found && NF > 0 {print}' CHANGELOG.md >> "$temp_file"
+    # Process the unreleased content with proper formatting
+    # This awk script formats the content with proper spacing around ### sections
+    awk '
+    /^## \[Unreleased\]/ { found=1; next }
+    found && /^## / { exit }
+    found && NF > 0 {
+        if (/^### /) {
+            if (in_section) print ""  # Add blank line before new ### section
+            print $0                  # Print the ### header
+            print ""                  # Add blank line after ### header
+            in_section = 1
+        } else if (/^- /) {
+            print $0                  # Print bullet points as-is
+        } else if (NF > 0) {
+            print $0                  # Print other non-empty lines
+        }
+    }' CHANGELOG.md >> "$temp_file"
     
     # Add a blank line before the next section
     echo "" >> "$temp_file"

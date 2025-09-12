@@ -237,6 +237,25 @@
 	--icon-filter: none;
 }
 
+/* Sticky footer that works with simple.css grid layout */
+html {
+	height: 100%;
+}
+
+body {
+	min-height: 100vh;
+	grid-template-rows: auto 1fr auto;
+}
+
+/* Ensure content in the middle row doesn't stretch but the row itself can grow */
+body > *:not(header):not(.site-footer) {
+	align-self: start;
+}
+
+body > .site-footer {
+	margin-top: 0;
+}
+
 /* A few overrides to simple.css */
 input,
 textarea,

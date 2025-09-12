@@ -69,7 +69,7 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - ~~Remove "customize your pagepouch experience"~~
 - **Make sure there's no box shadow on settings page**
 - ~~Make "Theme" seem like a subheading on "Appearance"~~
-- **Pin footer to the bottom of the viewport**
+- ~~Pin footer to the bottom of the viewport~~
 - Login card not centered L/R?
 - On larger screen, keep the bookmarks column to a reasonable width and don't let tags column get too wide
 - User settings table (theme for now).

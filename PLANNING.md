@@ -83,3 +83,19 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Are links sorted by date added? seems fishy
 - Add & edit links as modals not different page nor inline
 - Sort by link count toggle + then show the count on the tag
+- Simple /health endpoint
+- Plan for key recovery: is it just a user reset? We should make this easy to do.
+- Logging to /var/log
+- Monitoring somewhere
+- Subdomains for users? (wildcard cert)
+- Product update emails
+- Robots.txt
+- Configurable port
+- Consider letting NGINX handle static files instead
+- Ctrl(cmd)-enter on new link saves
+- Tags on new link show up like others
+- Get rid of toast for new link
+- Delete admin user
+- Check for and remove unused CSS
+- Bundle(?) & minify JS
+- TESTS!!!

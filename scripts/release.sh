@@ -5,31 +5,106 @@ set -euo pipefail
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-BINARY_NAME="pagepouch"
-REPO_NAME="pagepouch-rs"
+BINARY_NAME="pagepouch-rs"
 
 usage() {
-    echo "Usage: $0 <version> [release-notes]"
-    echo "Example: $0 v1.0.0 'Initial release with bookmark management'"
-    echo "Example: $0 v1.0.1 'Bug fixes and performance improvements'"
+    echo "Usage: $0"
+    echo ""
+    echo "This script automatically releases a new version based on CHANGELOG.md and Cargo.toml"
+    echo "It will:"
+    echo "  - Extract version from Cargo.toml"
+    echo "  - Validate it matches the most recent release in CHANGELOG.md"
+    echo "  - Extract release notes from CHANGELOG.md"
+    echo "  - Create and push git tag"
+    echo "  - Create GitHub release with binary"
     exit 1
 }
 
-if [[ $# -lt 1 ]]; then
+if [[ $# -gt 0 ]]; then
     usage
 fi
 
-VERSION="$1"
-RELEASE_NOTES="${2:-Release $VERSION}"
+# Function to extract version from Cargo.toml
+get_cargo_version() {
+    grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/'
+}
 
-# Validate version format
-if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo -e "${RED}❌ Version must be in format vX.Y.Z (e.g., v1.0.0)${NC}"
+# Function to get the most recent version from CHANGELOG.md (first non-Unreleased section)
+get_changelog_version() {
+    grep -E '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | head -1 | sed 's/^## \[\([0-9]*\.[0-9]*\.[0-9]*\)\].*/\1/'
+}
+
+# Function to extract release notes for a specific version from CHANGELOG.md
+get_release_notes() {
+    local version="$1"
+    # Find the section for this version and extract content until the next ## section
+    awk "/^## \[$version\]/ {found=1; next} found && /^## / {exit} found {print}" CHANGELOG.md | sed '/^$/d'
+}
+
+# Function to validate changelog content has substance
+validate_changelog_content() {
+    local version="$1"
+    local notes
+    notes=$(get_release_notes "$version")
+
+    # Check if there's at least one ### heading with bullet points
+    if ! echo "$notes" | grep -q "^### "; then
+        echo -e "${RED}❌ CHANGELOG.md for version $version has no subsections (### headings)${NC}"
+        return 1
+    fi
+
+    if ! echo "$notes" | grep -q "^- "; then
+        echo -e "${RED}❌ CHANGELOG.md for version $version has no bullet points (- items)${NC}"
+        return 1
+    fi
+
+    return 0
+}
+
+# Get versions
+CARGO_VERSION=$(get_cargo_version)
+CHANGELOG_VERSION=$(get_changelog_version)
+VERSION="v$CARGO_VERSION"
+
+echo -e "${BLUE}📋 Validating release configuration${NC}"
+
+# Validate Cargo.toml version format
+if [[ ! "$CARGO_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo -e "${RED}❌ Cargo.toml version '$CARGO_VERSION' must be in format X.Y.Z${NC}"
     exit 1
 fi
+
+# Validate CHANGELOG.md exists and is readable
+if [[ ! -r CHANGELOG.md ]]; then
+    echo -e "${RED}❌ CHANGELOG.md not found or not readable${NC}"
+    exit 1
+fi
+
+# Check if CHANGELOG.md has the expected structure
+if ! grep -q "^## \[Unreleased\]" CHANGELOG.md; then
+    echo -e "${RED}❌ CHANGELOG.md missing '## [Unreleased]' section${NC}"
+    exit 1
+fi
+
+# Validate versions match
+if [[ "$CARGO_VERSION" != "$CHANGELOG_VERSION" ]]; then
+    echo -e "${RED}❌ Version mismatch:${NC}"
+    echo -e "  Cargo.toml: $CARGO_VERSION"
+    echo -e "  CHANGELOG.md: $CHANGELOG_VERSION"
+    echo -e "  Please update one to match the other"
+    exit 1
+fi
+
+# Validate changelog content
+if ! validate_changelog_content "$CARGO_VERSION"; then
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Version validation passed: $VERSION${NC}"
 
 echo -e "${YELLOW}🚀 Starting release process for ${VERSION}${NC}"
 
@@ -49,13 +124,19 @@ if [[ "$CURRENT_BRANCH" != "main" ]]; then
     fi
 fi
 
-# Pull latest changes
-echo -e "${YELLOW}📥 Pulling latest changes${NC}"
+# Pull latest changes and tags
+echo -e "${YELLOW}📥 Pulling latest changes and tags${NC}"
 git pull origin "$CURRENT_BRANCH"
+git fetch --tags
 
-# Check if tag already exists
+# Check if tag already exists locally or remotely
 if git tag -l | grep -q "^${VERSION}$"; then
-    echo -e "${RED}❌ Tag ${VERSION} already exists${NC}"
+    echo -e "${RED}❌ Tag ${VERSION} already exists locally${NC}"
+    exit 1
+fi
+
+if git ls-remote --tags origin | grep -q "refs/tags/${VERSION}$"; then
+    echo -e "${RED}❌ Tag ${VERSION} already exists on remote${NC}"
     exit 1
 fi
 
@@ -87,6 +168,10 @@ if [[ ! -f "$BINARY_PATH" ]]; then
 fi
 
 echo -e "${GREEN}✅ Binary built successfully: $(ls -lh $BINARY_PATH | awk '{print $5}')${NC}"
+
+# Extract release notes from CHANGELOG.md
+echo -e "${YELLOW}📝 Extracting release notes from CHANGELOG.md${NC}"
+RELEASE_NOTES=$(get_release_notes "$CARGO_VERSION")
 
 # Create and push git tag
 echo -e "${YELLOW}🏷️  Creating git tag ${VERSION}${NC}"

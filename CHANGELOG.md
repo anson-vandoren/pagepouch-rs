@@ -1,0 +1,30 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0](https://github.com/anson-vandoren/pagepouch-rs.git) - 2025-09-11
+
+### Added
+
+- The MVP(ish) PagePouch app is now available [on the web](https://pagepouch.com).
+- Basic login works (for a default user).
+- Bookmarks can be added:
+  - Titles are auto-scraped from the URL.
+  - Description is optional and freeform.
+  - Tags can be added.
+- Bookmarks can be filtered:
+  - By tags, which must exist and must be exact match.
+  - Tags are AND'ed with each other and with any general query.
+  - General queries are OR'ed by default within the search terms.
+  - General query terms can be `and` or `AND` to override the default OR behavior.
+  - Quoted terms `"like this"` require exact match, non-quoted terms are more like-ish match.
+- Available tags show up in a sidebar column.
+  - Clicking a tag adds it as a filter.
+  - Tags that don't match any currently-filtered bookmarks are hidden in this column.
+  - Clicking on an active tag (highlighted above the rest of the tags) will remove the tag from the active filter.
+  - Clicking on the Tags or Bookmarks header will clear all existing filters/queries.

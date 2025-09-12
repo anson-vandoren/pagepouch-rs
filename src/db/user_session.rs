@@ -21,7 +21,7 @@ use crate::{
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct SessionToken(pub Uuid);
 
-/// User session containing authentication state and messages.
+/// User session containing authentication state.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Session {
     sid: SessionToken,

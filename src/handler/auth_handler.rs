@@ -38,7 +38,6 @@ pub async fn login_page_handler(State(state): ApiState, jar: CookieJar) -> impl 
     HtmlTemplate(crate::handler::LoginTemplate {
         title: "Login",
         auth_state: AuthState::LoginPage,
-        toasts: Vec::new(),
         is_error: false,
     })
     .into_response()
@@ -121,7 +120,6 @@ pub async fn login_user_handler(State(state): ApiState, jar: CookieJar, Form(for
         HtmlTemplate(HomeTemplate {
             title: "Home",
             auth_state: AuthState::Authenticated,
-            toasts: Vec::new(),
             is_error: false,
         }),
     )
@@ -152,19 +150,12 @@ pub async fn logout_handler(State(state): ApiState, jar: CookieJar) -> impl Into
         warn!(err = ?err, "Error invalidating user session, but clearing session cookie anyway.");
     }
 
-    // Return login page directly instead of redirect
-    let success_toast = crate::handler::Toast {
-        is_success: true,
-        message: "👋 Logged out successfully. See you next time!".to_string(),
-    };
-
     (
         clear_session(jar),
         [("HX-Push-Url", "/login")],
         HtmlTemplate(crate::handler::LoginTemplate {
             title: "Login",
             auth_state: AuthState::LoginPage,
-            toasts: vec![success_toast],
             is_error: false,
         }),
     )

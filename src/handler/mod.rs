@@ -12,7 +12,6 @@ use axum::{
     response::{Html, IntoResponse},
 };
 use axum_extra::extract::CookieJar;
-use serde::{Deserialize, Serialize};
 use tracing::error;
 
 use crate::{ApiState, handler::middlewares::check_session_cookie};
@@ -47,23 +46,10 @@ where
     }
 }
 
-/// User notification message displayed as a toast.
-///
-/// Toasts are temporary messages shown to users for feedback,
-/// such as success or error notifications.
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct Toast {
-    pub is_success: bool,
-    pub message: String,
-}
-
-type Toasts = Vec<Toast>;
-
 #[derive(Default, Template)]
 #[template(path = "pages/home.html")]
 pub struct HomeTemplate<'a> {
     pub title: &'a str,
-    pub toasts: Toasts,
     pub auth_state: AuthState,
     pub is_error: bool,
 }
@@ -74,7 +60,6 @@ struct Error404Template<'a> {
     title: &'a str,
     reason: &'a str,
     link: &'a str,
-    toasts: Toasts,
     auth_state: AuthState,
     is_error: bool,
 }
@@ -83,7 +68,6 @@ struct Error404Template<'a> {
 #[template(path = "auth/login.html")]
 struct LoginTemplate<'a> {
     title: &'a str,
-    toasts: Toasts,
     auth_state: AuthState,
     is_error: bool,
 }
@@ -91,12 +75,10 @@ struct LoginTemplate<'a> {
 /// Handler for the home page.
 ///
 /// Authentication is guaranteed by middleware.
-/// Displays any pending toast messages from the user's session.
 pub async fn home_handler() -> impl IntoResponse {
     HtmlTemplate(HomeTemplate {
         title: "Home",
         auth_state: AuthState::Authenticated,
-        toasts: vec![],
         is_error: false,
     })
     .into_response()
@@ -125,7 +107,6 @@ pub async fn handle_404(State(state): ApiState, jar: CookieJar) -> impl IntoResp
             link,
             auth_state,
             is_error: true,
-            ..Default::default()
         }),
     )
 }

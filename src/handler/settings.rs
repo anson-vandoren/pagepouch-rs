@@ -9,14 +9,13 @@ use serde::Deserialize;
 use crate::{
     ApiState,
     db::users::User,
-    handler::{AuthState, HtmlTemplate, Toasts},
+    handler::{AuthState, HtmlTemplate},
 };
 
 #[derive(Template)]
 #[template(path = "pages/settings.html")]
 pub struct SettingsTemplate<'a> {
     pub title: &'a str,
-    pub toasts: Toasts,
     pub auth_state: AuthState,
     pub is_error: bool,
 }
@@ -37,7 +36,6 @@ pub async fn settings_handler() -> impl IntoResponse {
     HtmlTemplate(SettingsTemplate {
         title: "Settings",
         auth_state: crate::handler::AuthState::Authenticated,
-        toasts: vec![],
         is_error: false,
     })
 }

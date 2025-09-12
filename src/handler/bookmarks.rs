@@ -14,7 +14,7 @@ use crate::{
         bookmarks::{self, BookmarkWithTags},
         users::User,
     },
-    handler::{AuthState, HomeTemplate, HtmlTemplate, Toasts},
+    handler::{AuthState, HomeTemplate, HtmlTemplate},
     search::SearchQuery,
 };
 
@@ -110,7 +110,6 @@ pub async fn bookmark_content_handler(
 #[template(path = "pages/bookmarks_new.html")]
 pub struct BookmarkNewTemplate<'a> {
     pub title: &'a str,
-    pub toasts: Toasts,
     pub auth_state: AuthState,
     pub is_error: bool,
 }
@@ -140,7 +139,6 @@ pub struct TitleInputTemplate {
 pub async fn bookmark_new_handler() -> impl IntoResponse {
     HtmlTemplate(BookmarkNewTemplate {
         title: "Add Bookmark",
-        toasts: Toasts::default(),
         auth_state: AuthState::Authenticated,
         is_error: false,
     })
@@ -178,7 +176,6 @@ pub async fn bookmark_create_handler(
         Ok(_bookmark_id) => HtmlTemplate(HomeTemplate {
             title: "Home",
             auth_state: AuthState::Authenticated,
-            toasts: vec![],
             is_error: false,
         })
         .into_response(),

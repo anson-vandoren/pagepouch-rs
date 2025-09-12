@@ -61,8 +61,8 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Row breaks between letters of tags
 - Tag column toggle to also filter by current tag filter. Filter tags are highlighted in tag column.
 - Limit the number of suggestions returned to ~10 or so, ranked.
-- **Login page is too skinny**
-- **Remove logout toast**
+- ~~Login page is too skinny~~
+- ~~Remove logout toast~~
 - **Simplify theme toggle - shouldn't be its own API call...**
 - **Theme toggle should just be a small selector, not a huge thing**
 - **Remove "more settings coming soon" thing**

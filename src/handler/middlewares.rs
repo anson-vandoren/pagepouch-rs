@@ -51,7 +51,6 @@ pub async fn auth_user_middleware(State(state): ApiState, jar: CookieJar, mut re
                 clear_session(jar),
                 HtmlTemplate(LoginTemplate {
                     title: "Login",
-                    toasts: Vec::new(),
                     auth_state: AuthState::LoginPage,
                     is_error: false,
                 }),

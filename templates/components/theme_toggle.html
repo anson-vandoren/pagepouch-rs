@@ -1,46 +1,34 @@
 <div class="theme-toggle">
   <form id="theme-form">
     <div class="theme-options">
-      <label class="theme-option">
+      <label class="theme-option" title="Follow system preference">
         <input 
           type="radio" 
           name="theme" 
           value="auto" 
           {% if current_theme == "auto" %}checked{% endif %}
         />
-        <span class="theme-option-content">
-          <span class="theme-icon">🌓</span>
-          <span class="theme-label">Auto</span>
-          <span class="theme-description">Follow system preference</span>
-        </span>
+        <span class="theme-icon">🌓</span>
       </label>
       
-      <label class="theme-option">
+      <label class="theme-option" title="Always use light theme">
         <input 
           type="radio" 
           name="theme" 
           value="light" 
           {% if current_theme == "light" %}checked{% endif %}
         />
-        <span class="theme-option-content">
-          <span class="theme-icon">☀️</span>
-          <span class="theme-label">Light</span>
-          <span class="theme-description">Always use light theme</span>
-        </span>
+        <span class="theme-icon">☀️</span>
       </label>
       
-      <label class="theme-option">
+      <label class="theme-option" title="Always use dark theme">
         <input 
           type="radio" 
           name="theme" 
           value="dark" 
           {% if current_theme == "dark" %}checked{% endif %}
         />
-        <span class="theme-option-content">
-          <span class="theme-icon">🌙</span>
-          <span class="theme-label">Dark</span>
-          <span class="theme-description">Always use dark theme</span>
-        </span>
+        <span class="theme-icon">🌙</span>
       </label>
     </div>
   </form>

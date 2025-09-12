@@ -896,7 +896,7 @@ search button:active {
 }
 
 .settings-header {
-	margin-bottom: 2rem;
+	margin-bottom: 1rem;
 	padding-bottom: 1rem;
 	border-bottom: 1px solid var(--bg3);
 }
@@ -923,12 +923,16 @@ search button:active {
 	border: 1px solid var(--bg3);
 	border-radius: 8px;
 	padding: 1.5rem;
+	box-shadow: none;
 }
 
 .settings-section h3 {
-	margin: 0 0 1rem 0;
-	color: var(--fg1);
-	font-size: 1.125rem;
+	margin: 0 0 1.5rem 0;
+	color: var(--fg0);
+	font-size: 1.25rem;
+	font-weight: 700;
+	border-bottom: 2px solid var(--bg3);
+	padding-bottom: 0.5rem;
 }
 
 .settings-item {
@@ -936,12 +940,15 @@ search button:active {
 	justify-content: space-between;
 	align-items: flex-start;
 	gap: 1rem;
+	margin-bottom: 1rem;
 }
 
-.settings-item label {
+.settings-item > label {
 	font-weight: 600;
-	color: var(--fg1);
+	color: var(--fg2);
 	min-width: 100px;
+	font-size: 0.95rem;
+	margin-left: 1rem;
 }
 
 .settings-coming-soon {
@@ -957,19 +964,23 @@ search button:active {
 
 .theme-options {
 	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
+	flex-direction: row;
+	gap: 0.5rem;
 }
 
 .theme-option {
-	display: block;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	cursor: pointer;
 	background-color: var(--bg0);
 	border: 2px solid var(--bg2);
-	border-radius: 6px;
-	padding: 0.75rem 1rem;
+	border-radius: 8px;
+	padding: 0.75rem;
 	transition: all 0.2s ease;
 	position: relative;
+	min-width: 48px;
+	min-height: 48px;
 }
 
 .theme-option:hover {
@@ -987,23 +998,8 @@ search button:active {
 	visibility: hidden;
 }
 
-.theme-option input[type='radio']:checked + .theme-option-content {
+.theme-option input[type='radio']:checked + .theme-icon {
 	color: var(--accent);
-}
-
-.theme-option input[type='radio']:checked {
-	~ .theme-option-content::after {
-		content: '';
-		visibility: hidden;
-		position: absolute;
-		right: 1rem;
-		top: 50%;
-		transform: translateY(-50%);
-		width: 12px;
-		height: 12px;
-		background-color: var(--accent);
-		border-radius: 50%;
-	}
 }
 
 .theme-option:has(input[type='radio']:checked) {
@@ -1011,29 +1007,10 @@ search button:active {
 	background-color: var(--bg_h);
 }
 
-.theme-option-content {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-	position: relative;
-}
-
 .theme-icon {
-	font-size: 1.25rem;
-	width: 1.5rem;
-	text-align: center;
-}
-
-.theme-label {
-	font-weight: 600;
-	color: var(--fg1);
-	min-width: 60px;
-}
-
-.theme-description {
-	color: var(--fg3);
-	font-size: 0.875rem;
-	flex: 1;
+	font-size: 1.5rem;
+	line-height: 1;
+	transition: all 0.2s ease;
 }
 
 @media (max-width: 600px) {
@@ -1042,18 +1019,14 @@ search button:active {
 		align-items: flex-start;
 	}
 
+	.settings-item > label {
+		margin-left: 0;
+		margin-bottom: 0.5rem;
+	}
+
 	.theme-options {
 		width: 100%;
-	}
-
-	.theme-option-content {
-		flex-wrap: wrap;
-	}
-
-	.theme-description {
-		width: 100%;
-		margin-left: 2.25rem;
-		margin-top: 0.25rem;
+		justify-content: flex-start;
 	}
 }
 

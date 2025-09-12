@@ -64,11 +64,14 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - ~~Login page is too skinny~~
 - ~~Remove logout toast~~
 - ~~Simplify theme toggle - shouldn't be its own API call...~~
-- **Theme toggle should just be a small selector, not a huge thing**
+- ~~Theme toggle should just be a small selector, not a huge thing~~
 - ~~Remove "more settings coming soon" thing~~
 - ~~Remove "customize your pagepouch experience"~~
 - **Make sure there's no box shadow on settings page**
-- **Make "Theme" seem like a subheading on "Appearance"**
+- ~~Make "Theme" seem like a subheading on "Appearance"~~
+- **Pin footer to the bottom of the viewport**
+- Login card not centered L/R?
+- On larger screen, keep the bookmarks column to a reasonable width and don't let tags column get too wide
 - User settings table (theme for now).
   - Theme should be settable persistently but should be overrideable per device/browser. (localstorage?)
 - Theme setting probably should use JSON instead of form?

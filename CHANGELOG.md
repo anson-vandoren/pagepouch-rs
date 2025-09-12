@@ -7,17 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/anson-vandoren/pagepouch-rs/compare/v0.1.1...v0.1.2) - 2025-09-12
 ### Removed
-
 - Removed the success toast message when creating a new link.
 - Adding a new link will now also try to scrape a description.
-
 ### Changed
-
 - Made title/description lookup much faster when creating a new link.
-
 ### Fixed
-
 - Fixed incorrect bookmark sorting (should be by bookmark creation date/time).
 
 ## [0.1.1](https://github.com/anson-vandoren/pagepouch-rs/compare/v0.1.0...v0.1.1) - 2025-09-12

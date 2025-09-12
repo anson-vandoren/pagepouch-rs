@@ -1,9 +1,5 @@
 <div class="theme-toggle">
-  <form 
-    hx-post="/api/settings/theme" 
-    hx-target="#theme-toggle-container"
-    hx-swap="innerHTML"
-  >
+  <form id="theme-form">
     <div class="theme-options">
       <label class="theme-option">
         <input 
@@ -11,9 +7,6 @@
           name="theme" 
           value="auto" 
           {% if current_theme == "auto" %}checked{% endif %}
-          hx-post="/api/settings/theme"
-          hx-target="#theme-toggle-container"
-          hx-trigger="change"
         />
         <span class="theme-option-content">
           <span class="theme-icon">🌓</span>
@@ -28,9 +21,6 @@
           name="theme" 
           value="light" 
           {% if current_theme == "light" %}checked{% endif %}
-          hx-post="/api/settings/theme"
-          hx-target="#theme-toggle-container"
-          hx-trigger="change"
         />
         <span class="theme-option-content">
           <span class="theme-icon">☀️</span>
@@ -45,9 +35,6 @@
           name="theme" 
           value="dark" 
           {% if current_theme == "dark" %}checked{% endif %}
-          hx-post="/api/settings/theme"
-          hx-target="#theme-toggle-container"
-          hx-trigger="change"
         />
         <span class="theme-option-content">
           <span class="theme-icon">🌙</span>
@@ -60,29 +47,29 @@
 </div>
 
 <script>
-  // Apply theme immediately when changed
+  // Apply theme immediately when changed and save to server
   document.querySelectorAll('input[name="theme"]').forEach(input => {
     input.addEventListener('change', function() {
       const theme = this.value;
-      applyTheme(theme);
+      
+      // Apply theme immediately using the global function
+      if (window.applyTheme) {
+        window.applyTheme(theme);
+      }
+      
+      // Save preference to server
+      const params = new URLSearchParams();
+      params.append('theme', theme);
+      
+      fetch('/api/settings/theme', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params
+      }).catch(err => {
+        console.error('Failed to save theme preference:', err);
+      });
     });
   });
-  
-  // Apply current theme on load
-  applyTheme('{{ current_theme }}');
-  
-  function applyTheme(theme) {
-    const html = document.documentElement;
-    
-    if (theme === 'dark') {
-      html.classList.add('force-dark');
-      html.classList.remove('force-light');
-    } else if (theme === 'light') {
-      html.classList.add('force-light');
-      html.classList.remove('force-dark');
-    } else {
-      // auto - remove forced classes, let CSS media query handle it
-      html.classList.remove('force-dark', 'force-light');
-    }
-  }
 </script>

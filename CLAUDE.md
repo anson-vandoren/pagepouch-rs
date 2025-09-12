@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## General guidelines
+
+- Don't just agree with me. Make informed pushback if you disagree. I'm not always right and I value a good discussion of the merits.
+
 ## Project Overview
 
 PagePouch is a self-hosted Rust web application for managing bookmarks with multi-user authentication, tag management, and import/export functionality. It uses SQLite for storage, Axum for HTTP handling, and Askama for server-side HTML templating with a Gruvbox color scheme.

@@ -48,7 +48,7 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Bookmark metadata extraction (title, etc.)
 - Search implementation plan
 
-## TODO:
+## TODO
 
 - Pagination
 - tab'ing from an added tag should show it as a box
@@ -63,12 +63,15 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Limit the number of suggestions returned to ~10 or so, ranked.
 - ~~Login page is too skinny~~
 - ~~Remove logout toast~~
-- **Simplify theme toggle - shouldn't be its own API call...**
+- ~~Simplify theme toggle - shouldn't be its own API call...~~
 - **Theme toggle should just be a small selector, not a huge thing**
-- **Remove "more settings coming soon" thing**
-- **Remove "customize your pagepouch experience"**
+- ~~Remove "more settings coming soon" thing~~
+- ~~Remove "customize your pagepouch experience"~~
 - **Make sure there's no box shadow on settings page**
 - **Make "Theme" seem like a subheading on "Appearance"**
+- User settings table (theme for now).
+  - Theme should be settable persistently but should be overrideable per device/browser. (localstorage?)
+- Theme setting probably should use JSON instead of form?
 - Minify CSS and JS for prod
 - Are HTMX/Askama still even the right choice here? This is much more of an app than a static page...
 - 3+ query OR terms fail. Probably needs a fix like search_multiple_terms_and
@@ -95,7 +98,7 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Bundle(?) & minify JS
 - TESTS!!!
 - Remove tailscale from box, probably
-- Find all <script> tags and consolidate them
+- Find all `<script>` tags and consolidate them
 - Overall project structure
 - Test that autologout works still
 - title_input.html seems like it's only there because of HTMX and we should just use JS w/ a JSON repsonse?

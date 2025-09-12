@@ -78,19 +78,25 @@
         return null;
       };
 
-      const theme = getCookie("theme") || "auto";
-      const html = document.documentElement;
+      // Global theme application function
+      window.applyTheme = function(theme) {
+        const html = document.documentElement;
+        
+        if (theme === "dark") {
+          html.classList.add("force-dark");
+          html.classList.remove("force-light");
+        } else if (theme === "light") {
+          html.classList.add("force-light");
+          html.classList.remove("force-dark");
+        } else {
+          // auto - remove all forced classes
+          html.classList.remove("force-dark", "force-light");
+        }
+      };
 
-      if (theme === "dark") {
-        html.classList.add("force-dark");
-        html.classList.remove("force-light");
-      } else if (theme === "light") {
-        html.classList.add("force-light");
-        html.classList.remove("force-dark");
-      } else {
-        // auto - remove all forced classes
-        html.classList.remove("force-dark", "force-light");
-      }
+      // Apply current theme on page load
+      const theme = getCookie("theme") || "auto";
+      window.applyTheme(theme);
     })();
   </script>
 </html>

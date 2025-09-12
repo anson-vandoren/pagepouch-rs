@@ -1,16 +1,12 @@
 //! Settings-related handlers and templates.
 
 use askama::Template;
-use axum::{Extension, extract::State, response::IntoResponse};
+use axum::response::IntoResponse;
 use axum_extra::extract::CookieJar;
 use cookie::time::Duration;
 use serde::Deserialize;
 
-use crate::{
-    ApiState,
-    db::users::User,
-    handler::{AuthState, HtmlTemplate},
-};
+use crate::handler::{AuthState, HtmlTemplate};
 
 #[derive(Template)]
 #[template(path = "pages/settings.html")]
@@ -18,11 +14,6 @@ pub struct SettingsTemplate<'a> {
     pub title: &'a str,
     pub auth_state: AuthState,
     pub is_error: bool,
-}
-
-#[derive(Template)]
-#[template(path = "components/theme_toggle.html")]
-pub struct ThemeToggleTemplate {
     pub current_theme: String,
 }
 
@@ -32,22 +23,18 @@ pub struct ThemeUpdate {
 }
 
 /// Handler for the settings page
-pub async fn settings_handler() -> impl IntoResponse {
-    HtmlTemplate(SettingsTemplate {
-        title: "Settings",
-        auth_state: crate::handler::AuthState::Authenticated,
-        is_error: false,
-    })
-}
-
-/// API handler for theme toggle component (HTMX lazy loading)
-pub async fn theme_toggle_handler(State(_state): ApiState, Extension(_user): Extension<User>, jar: CookieJar) -> impl IntoResponse {
+pub async fn settings_handler(jar: CookieJar) -> impl IntoResponse {
     // Get current theme from cookie, default to "auto"
     let current_theme = jar
         .get("theme")
         .map_or_else(|| "auto".to_string(), |cookie| cookie.value().to_string());
 
-    HtmlTemplate(ThemeToggleTemplate { current_theme })
+    HtmlTemplate(SettingsTemplate {
+        title: "Settings",
+        auth_state: crate::handler::AuthState::Authenticated,
+        is_error: false,
+        current_theme,
+    })
 }
 
 /// API handler for updating theme preference
@@ -73,7 +60,6 @@ pub async fn update_theme_handler(
 
     let jar = jar.add(cookie);
 
-    // Return updated theme toggle component
-    let current_theme = theme_update.theme;
-    (jar, HtmlTemplate(ThemeToggleTemplate { current_theme }))
+    // Just return success - JavaScript handles the UI update
+    (jar, "OK")
 }

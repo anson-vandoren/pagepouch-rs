@@ -7,8 +7,10 @@ use axum::{
     Router,
     handler::Handler,
     middleware::from_fn_with_state,
+    response::IntoResponse,
     routing::{get, post},
 };
+use reqwest::StatusCode;
 use tokio::time;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::compression::CompressionLayer;
@@ -110,8 +112,13 @@ fn create_router(app_state: Arc<AppState>) -> Router {
     .layer(CompressionLayer::new())
     // rust-embed-for-web automatically handles compression
     .route("/assets/{*path}", get(assets_handler))
+    .route("/health", get(health_check))
     .with_state(app_state)
     .layer(create_filtered_trace_layer())
+}
+
+pub async fn health_check() -> impl IntoResponse {
+    StatusCode::OK
 }
 
 fn init_tracing() -> anyhow::Result<()> {

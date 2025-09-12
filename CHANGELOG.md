@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Health check endpoint for monitoring.
+- Pressing Ctrl+Enter (or Cmd+Enter on macOS) on the `Add Link` page will now submit the form.
+
+### Changed
+
+- When creating a new link, if a URL without https/http is entered it will be automatically guessed and corrected.
+- URL input field is automatically selected when creating a new link.
+
 ## [0.1.0](https://github.com/anson-vandoren/pagepouch-rs.git) - 2025-09-11
 
 ### Added

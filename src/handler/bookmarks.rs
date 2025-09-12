@@ -128,11 +128,19 @@ pub struct FetchTitleRequest {
 
 #[derive(Template)]
 #[template(
-    source = r#"<input type="text" id="title" name="title" required value="{{ title }}">"#,
+    source = r#"<input type="text" id="title" name="title" required value="{{ title }}">
+<script>
+// Update URL field if protocol was guessed
+const urlField = document.getElementById('url');
+if (urlField && '{{ corrected_url }}' !== urlField.value) {
+    urlField.value = '{{ corrected_url }}';
+}
+</script>"#,
     ext = "html"
 )]
 pub struct TitleInputTemplate {
     pub title: String,
+    pub corrected_url: String,
 }
 
 /// Handler for displaying the bookmark creation form
@@ -163,11 +171,14 @@ pub async fn bookmark_create_handler(
         })
         .unwrap_or_default();
 
+    // Guess protocol if missing and update URL
+    let final_url = guess_protocol(&form.url).await;
+
     // Create the bookmark in the database
     match bookmarks::create_bookmark(
         &state.pool,
         user.user_id,
-        &form.url,
+        &final_url,
         &form.title,
         form.description.as_deref(),
         &tag_names,
@@ -198,30 +209,70 @@ pub async fn bookmark_create_handler(
 
 /// Handler for fetching page title from URL
 pub async fn fetch_title_handler(Form(request): Form<FetchTitleRequest>) -> impl IntoResponse {
-    match fetch_page_title(&request.url).await {
+    // Try to guess protocol if missing
+    let url = guess_protocol(&request.url).await;
+
+    match fetch_page_title(&url).await {
         Ok(title) => {
-            debug!(url = request.url, title, "Fetched title");
-            HtmlTemplate(TitleInputTemplate { title })
+            debug!(url = url, title, "Fetched title");
+            HtmlTemplate(TitleInputTemplate {
+                title,
+                corrected_url: url.clone(),
+            })
         }
         Err(err) => {
-            warn!("🌐 Failed to fetch title for {}: {}", request.url, err);
+            warn!("🌐 Failed to fetch title for {}: {}", url, err);
             // Return the URL as fallback title
-            let fallback_title = extract_domain_from_url(&request.url).unwrap_or_else(|| request.url.clone());
-            HtmlTemplate(TitleInputTemplate { title: fallback_title })
+            let fallback_title = extract_domain_from_url(&url).unwrap_or_else(|| url.clone());
+            HtmlTemplate(TitleInputTemplate {
+                title: fallback_title,
+                corrected_url: url.clone(),
+            })
         }
     }
 }
 
-/// Fetches the title from a webpage.
+/// Tries to guess the correct protocol for a URL by testing HTTPS first, then HTTP.
+async fn guess_protocol(url: &str) -> String {
+    // If URL already has a protocol, return as-is
+    if url.starts_with("http://") || url.starts_with("https://") {
+        return url.to_string();
+    }
+
+    let url_with_tls = format!("https://{url}");
+    let http_url = format!("http://{url}");
+
+    // Quick HEAD request to test HTTPS first
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_millis(800))
+        .user_agent("PagePouch/1.0")
+        .build()
+        .unwrap_or_default();
+
+    // Try HTTPS first
+    if let Ok(response) = client.head(&url_with_tls).send().await
+        && response.status().is_success()
+    {
+        debug!("🔒 Protocol guessed: HTTPS for {}", url);
+        return url_with_tls;
+    }
+
+    // Fallback to HTTP
+    debug!("🔓 Protocol guessed: HTTP for {}", url);
+    http_url
+}
+
+/// Fetches the title from a webpage with optimizations for speed.
 ///
 /// # Errors
 ///
 /// Returns an error if the HTTP request fails or HTML parsing fails.
 async fn fetch_page_title(url: &str) -> anyhow::Result<String> {
     debug!(url, "Starting title fetch");
-    // Create HTTP client with timeout
+
+    // Create HTTP client with aggressive timeout since title should be in head
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(2))
+        .timeout(std::time::Duration::from_millis(1000))
         .user_agent("PagePouch/1.0")
         .build()?;
 
@@ -233,6 +284,7 @@ async fn fetch_page_title(url: &str) -> anyhow::Result<String> {
         return Err(anyhow::anyhow!("HTTP error: {}", response.status()));
     }
 
+    // Get response text with streaming to potentially stop early
     let html = response.text().await?;
 
     // Parse HTML and extract title

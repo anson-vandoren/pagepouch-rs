@@ -333,11 +333,11 @@ mv "$TEMP_PATH" "$BINARY_PATH"
 
 # Restart service (using sudo since pagepouch runs as system service)
 echo "🔄 Restarting PagePouch service"
-sudo systemctl restart pagepouch
+sudo -n systemctl restart pagepouch
 
 # Wait a moment and check if service is running
 sleep 3
-if sudo systemctl is-active --quiet pagepouch; then
+if sudo -n systemctl is-active --quiet pagepouch; then
     echo "✅ PagePouch deployment successful for version ${TAG_NAME}"
 
     # Send Telegram notification (optional)
@@ -354,7 +354,7 @@ else
     if [[ -f "$BACKUP_PATH" ]]; then
         echo "🔙 Restoring backup"
         mv "$BACKUP_PATH" "$BINARY_PATH"
-        sudo systemctl restart pagepouch
+        sudo -n systemctl restart pagepouch
     fi
 
     # Send failure notification

@@ -175,7 +175,7 @@ RELEASE_NOTES=$(get_release_notes "$CARGO_VERSION")
 
 # Create and push git tag
 echo -e "${YELLOW}🏷️  Creating git tag ${VERSION}${NC}"
-git tag -a "$VERSION" -m "Release $VERSION"
+git tag -s "$VERSION" -m "Release $VERSION"
 git push origin "$VERSION"
 
 # Create GitHub release

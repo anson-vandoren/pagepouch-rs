@@ -15,7 +15,7 @@ pub struct BookmarkWithTags {
     pub url: String,
     pub title: String,
     pub created_at: i64,
-    pub formatted_date: String,
+    pub created_ago: String,
     pub created_by: String,
     pub tags: Vec<TagInfo>,
 }
@@ -72,13 +72,13 @@ pub async fn get_user_bookmarks(pool: &SqlitePool, user_id: Uuid, limit: i64, of
         tags.sort_unstable();
         let tags = tags.into_iter().map(TagInfo::from).collect();
 
-        let formatted_date = format_timestamp(bookmark.created_at);
+        let created_ago = get_created_ago(bookmark.created_at);
 
         result.push(BookmarkWithTags {
             url: bookmark.url,
             title: bookmark.title,
             created_at: bookmark.created_at,
-            formatted_date,
+            created_ago,
             created_by: bookmark.created_by,
             tags,
         });
@@ -135,13 +135,13 @@ pub async fn get_user_bookmarks_by_tag(
         tags.sort_unstable();
         let tags = tags.into_iter().map(TagInfo::from).collect();
 
-        let formatted_date = format_timestamp(bookmark.created_at);
+        let created_ago = get_created_ago(bookmark.created_at);
 
         result.push(BookmarkWithTags {
             url: bookmark.url,
             title: bookmark.title,
             created_at: bookmark.created_at,
-            formatted_date,
+            created_ago,
             created_by: bookmark.created_by,
             tags,
         });
@@ -257,13 +257,13 @@ pub async fn search_user_bookmarks(
         tags.sort_unstable();
         let tags = tags.into_iter().map(TagInfo::from).collect();
 
-        let formatted_date = format_timestamp(bookmark.created_at);
+        let created_ago = get_created_ago(bookmark.created_at);
 
         result.push(BookmarkWithTags {
             url: bookmark.url,
             title: bookmark.title,
             created_at: bookmark.created_at,
-            formatted_date,
+            created_ago,
             created_by: bookmark.created_by,
             tags,
         });
@@ -381,12 +381,12 @@ async fn search_single_word(pool: &SqlitePool, user_id: Uuid, word: &str, limit:
             tags.sort_unstable();
             let tags = tags.into_iter().map(TagInfo::from).collect();
 
-            let formatted_date = format_timestamp(record.created_at);
+            let created_ago = get_created_ago(record.created_at);
             BookmarkWithTags {
                 url: record.url,
                 title: record.title,
                 created_at: record.created_at,
-                formatted_date,
+                created_ago,
                 created_by: record.created_by,
                 tags,
             }
@@ -447,12 +447,12 @@ async fn search_single_phrase(pool: &SqlitePool, user_id: Uuid, phrase: &str, li
             tags.sort_unstable();
             let tags = tags.into_iter().map(TagInfo::from).collect();
 
-            let formatted_date = format_timestamp(record.created_at);
+            let created_ago = get_created_ago(record.created_at);
             BookmarkWithTags {
                 url: record.url,
                 title: record.title,
                 created_at: record.created_at,
-                formatted_date,
+                created_ago,
                 created_by: record.created_by,
                 tags,
             }
@@ -540,13 +540,13 @@ async fn search_two_terms_or(
         let tags = tags.into_iter().map(TagInfo::from).collect();
 
         let created_at: i64 = row.get("created_at");
-        let formatted_date = format_timestamp(created_at);
+        let created_ago = get_created_ago(created_at);
 
         result.push(BookmarkWithTags {
             url: row.get("url"),
             title: row.get("title"),
             created_at,
-            formatted_date,
+            created_ago,
             created_by: row.get("created_by"),
             tags,
         });
@@ -646,13 +646,13 @@ async fn search_multiple_terms_and(
         let tags = tags.into_iter().map(TagInfo::from).collect();
 
         let created_at: i64 = row.get("created_at");
-        let formatted_date = format_timestamp(created_at);
+        let created_ago = get_created_ago(created_at);
 
         result.push(BookmarkWithTags {
             url: row.get("url"),
             title: row.get("title"),
             created_at,
-            formatted_date,
+            created_ago,
             created_by: row.get("created_by"),
             tags,
         });
@@ -726,13 +726,13 @@ pub async fn search_by_tags_only(
         let tags = tags.into_iter().map(TagInfo::from).collect();
 
         let created_at: i64 = row.get("created_at");
-        let formatted_date = format_timestamp(created_at);
+        let created_ago = get_created_ago(created_at);
 
         result.push(BookmarkWithTags {
             url: row.get("url"),
             title: row.get("title"),
             created_at,
-            formatted_date,
+            created_ago,
             created_by: row.get("created_by"),
             tags,
         });
@@ -761,11 +761,48 @@ fn filter_bookmarks_by_tags(bookmarks: Vec<BookmarkWithTags>, required_tags: &[S
         .collect()
 }
 
-/// Formats a Unix timestamp into a human-readable date string.
-fn format_timestamp(timestamp: i64) -> String {
+/// Formats a Unix timestamp into a human-readable "time ago" string.
+fn get_created_ago(timestamp: i64) -> String {
     use chrono::{DateTime, Utc};
 
     let dt = DateTime::from_timestamp(timestamp, 0).unwrap_or_else(Utc::now);
+    let now = Utc::now();
+    let duration = now.signed_duration_since(dt);
 
-    dt.format("%b %d, %Y").to_string()
+    let total_seconds = duration.num_seconds();
+    if total_seconds < 0 {
+        return "now".to_string();
+    }
+
+    let days = total_seconds / 86400; // 60 * 60 * 24
+    if days >= 1 {
+        return if days == 1 {
+            // unpluralized
+            "1 day ago".to_string()
+        } else {
+            format!("{days} days ago")
+        };
+    }
+
+    let hours = total_seconds / 3600; // 60 * 60
+    if hours >= 1 {
+        return if hours == 1 {
+            // unpluralized
+            "1 hour ago".to_string()
+        } else {
+            format!("{hours} hours ago")
+        };
+    }
+
+    let minutes = total_seconds / 60;
+    if minutes >= 1 {
+        return if minutes == 1 {
+            // unpluralized
+            "1 minute ago".to_string()
+        } else {
+            format!("{minutes} minutes ago")
+        };
+    }
+
+    "now".to_string()
 }

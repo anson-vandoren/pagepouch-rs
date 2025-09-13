@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Possibly fixed an issue with being rate limited after the server wakes from sleep (probably only a dev issue).
+
+### Changed
+
+- Switched rate limiting to work correctly behind a reverse proxy.
+
 ## [0.1.4](https://github.com/anson-vandoren/pagepouch-rs/compare/v0.1.3...v0.1.4) - 2025-09-12
 
 ### Changed

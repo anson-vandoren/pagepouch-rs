@@ -5,7 +5,7 @@
     >
   </h3>
   {% if bookmark.tags.len() > 0 %}
-    <div class="bookmark-tags">
+    <div class="bookmark-item-tag-container">
       {% for tag in bookmark.tags %}
         <span
           class="tag"
@@ -18,7 +18,7 @@
     </div>
   {% else %}
     <!-- Maintain the spacing when no tags are present, but keep the div actually empty. Plus fucking satisfy stupid fucking prettier -->
-    <div class="bookmark-tags"></div>
+    <div class="bookmark-item-tag-container"></div>
   {% endif %}
   <div class="bookmark-meta">
     <time datetime="{{ bookmark.created_at }}">{{ bookmark.created_ago }}</time>

@@ -72,10 +72,7 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Padding on tags under links needs to go smaller
 - Highlighting active tags in light mode needs a different color
 - Vertical align top of tags on the right with top of top bookmark
-- ~~No tags still renders a little turd~~
-- ~~Save & cancel on add link are different heights~~
 - Check settings on old app to move over
-- ~~Use local time not UTC~~
 - Add & edit links as modals not different page nor inline
 - Sort by link count toggle + then show the count on the tag
 - Plan for key recovery: is it just a user reset? We should make this easy to do.
@@ -89,6 +86,7 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Convert release tool to... Rust? smth, anyway
 - Longer cookie/session timeout
 - Delete button w/ confirm
+- HTML-de-escaping for scraped description
 
 - bookmarks.rs has a _lot_ of duplicated code
 - Check for and remove unused CSS

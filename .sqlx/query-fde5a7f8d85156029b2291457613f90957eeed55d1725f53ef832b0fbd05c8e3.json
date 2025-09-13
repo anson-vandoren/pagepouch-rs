@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        select\n            url,\n            title,\n            created_at,\n            tags_string\n        from bookmark_with_tags bwt\n        where user_id = $1\n        and (\n            title like $2\n            or description like $3\n            or url like $4\n            or exists (\n                select 1 from bookmark_tags bt\n                join tags t on bt.tag_id = t.tag_id\n                where\n                    bt.bookmark_id = bwt.bookmark_id\n                    and t.name like $5\n            )\n        )\n        order by created_at desc\n        limit $6 offset $7\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "url",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "tags_string",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "fde5a7f8d85156029b2291457613f90957eeed55d1725f53ef832b0fbd05c8e3"
+}

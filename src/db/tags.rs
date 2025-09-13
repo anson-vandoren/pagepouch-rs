@@ -5,7 +5,7 @@ use sqlx::{Row, SqliteConnection, SqlitePool};
 
 use crate::db::bookmarks::TagInfo;
 
-/// Retrieves all tags used by a user's bookmarks, ordered by usage.
+/// Retrieves all tags used by a user's bookmarks, ordered by name.
 ///
 /// # Errors
 ///

@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Switched rate limiting to work correctly behind a reverse proxy.
+- 🤓 refactored a lot of the bookmarks database code for clarity and brevity.
 
 ## [0.1.4](https://github.com/anson-vandoren/pagepouch-rs/compare/v0.1.3...v0.1.4) - 2025-09-12
 

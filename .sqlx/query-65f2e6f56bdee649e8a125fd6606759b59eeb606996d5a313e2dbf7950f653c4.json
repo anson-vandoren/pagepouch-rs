@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        select\n            url,\n            title,\n            created_at,\n            tags_string\n        from bookmark_with_tags\n        where\n            user_id = $1\n            and is_archived = 0\n            and bookmark_id in (\n                select bt.bookmark_id\n                from bookmark_tags bt\n                join tags t on bt.tag_id = t.tag_id\n                where t.name = $2\n            )\n        order by created_at desc\n        limit $3 offset $4\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "url",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "tags_string",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "65f2e6f56bdee649e8a125fd6606759b59eeb606996d5a313e2dbf7950f653c4"
+}

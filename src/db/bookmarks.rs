@@ -105,16 +105,15 @@ pub async fn get_user_bookmarks(pool: &SqlitePool, user_id: Uuid, limit: i64, of
         BookmarkRecord,
         r#"
         select
-            b.url,
-            b.title,
-            b.created_at,
-            GROUP_CONCAT(distinct t.name) as "tags_string: String"
-        from bookmarks b
-        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
-        left join tags t on bt.tag_id = t.tag_id
-        where b.user_id = $1 and b.is_archived = 0
-        group by b.bookmark_id, b.url, b.title, b.created_at
-        order by b.created_at desc
+            url,
+            title,
+            created_at,
+            tags_string
+        from bookmark_with_tags
+        where
+            user_id = $1
+            and is_archived = 0
+        order by created_at desc
         limit $2 offset $3
         "#,
         user_id,
@@ -133,27 +132,29 @@ pub async fn get_user_bookmarks(pool: &SqlitePool, user_id: Uuid, limit: i64, of
 ///
 /// Returns an error if database query fails.
 pub async fn get_user_bookmarks_by_tag(pool: &SqlitePool, user_id: Uuid, tag_name: &str, limit: i64, offset: i64) -> Result<BookmarkList> {
-    let tag_pattern = format!("%{tag_name}%");
     let bookmarks = sqlx::query_as!(
         BookmarkRecord,
         r#"
         select
-            b.url,
-            b.title,
-            b.created_at,
-            GROUP_CONCAT(distinct t2.name) as "tags_string: String"
-        from bookmarks b
-        join bookmark_tags bt_filter on b.bookmark_id = bt_filter.bookmark_id
-        join tags t_filter on bt_filter.tag_id = t_filter.tag_id
-        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
-        left join tags t2 on bt.tag_id = t2.tag_id
-        where b.user_id = $1 and b.is_archived = 0 and t_filter.name like $2
-        group by b.bookmark_id, b.url, b.title, b.created_at
-        order by b.created_at desc
+            url,
+            title,
+            created_at,
+            tags_string
+        from bookmark_with_tags
+        where
+            user_id = $1
+            and is_archived = 0
+            and bookmark_id in (
+                select bt.bookmark_id
+                from bookmark_tags bt
+                join tags t on bt.tag_id = t.tag_id
+                where t.name = $2
+            )
+        order by created_at desc
         limit $3 offset $4
         "#,
         user_id,
-        tag_pattern,
+        tag_name,
         limit,
         offset
     )
@@ -200,6 +201,7 @@ pub async fn search_user_bookmarks_advanced(
                 .map(std::string::ToString::to_string)
                 .collect::<Vec<_>>()
                 .join(" ");
+            // TODO: this is bullshit
             search_user_bookmarks(pool, user_id, &search_term, limit, offset).await?
         }
     };
@@ -224,25 +226,25 @@ pub async fn search_user_bookmarks(pool: &SqlitePool, user_id: Uuid, search_term
         BookmarkRecord,
         r#"
         select
-            b.url,
-            b.title,
-            b.created_at,
-            GROUP_CONCAT(distinct t2.name) as "tags_string: String"
-        from bookmarks b
-        left join bookmark_tags bt_search on b.bookmark_id = bt_search.bookmark_id
-        left join tags t_search on bt_search.tag_id = t_search.tag_id
-        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
-        left join tags t2 on bt.tag_id = t2.tag_id
-        where b.user_id = ? and b.is_archived = 0
+            url,
+            title,
+            created_at,
+            tags_string
+        from bookmark_with_tags bwt
+        where user_id = $1
         and (
-            b.title like ? or
-            b.description like ? or
-            b.url like ? or
-            t_search.name like ?
+            title like $2 or
+            description like $3 or
+            url like $4 or
+            exists (
+                select 1 from bookmark_tags bt
+                join tags t on bt.tag_id = t.tag_id
+                where bt.bookmark_id = bwt.bookmark_id
+                and t.name like $5
+            )
         )
-        group by b.bookmark_id, b.url, b.title, b.created_at
-        order by b.created_at desc
-        limit ? offset ?
+        order by created_at desc
+        limit $6 offset $7
         "#,
         user_id,
         search_pattern,
@@ -271,26 +273,27 @@ async fn search_single_word(pool: &SqlitePool, user_id: Uuid, word: &str, limit:
     let res = sqlx::query_as!(
         BookmarkRecord,
         r#"
-        select distinct
-            b.url,
-            b.title,
-            b.created_at,
-            GROUP_CONCAT(distinct t2.name) as "tags_string: String"
-        from bookmarks b
-        left join bookmark_tags bt_search on b.bookmark_id = bt_search.bookmark_id
-        left join tags t_search on bt_search.tag_id = t_search.tag_id
-        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
-        left join tags t2 on bt.tag_id = t2.tag_id
-        where b.user_id = ? and b.is_archived = 0
+        select
+            url,
+            title,
+            created_at,
+            tags_string
+        from bookmark_with_tags bwt
+        where user_id = $1
         and (
-            b.title like ? or
-            b.description like ? or
-            b.url like ? or
-            t_search.name like ?
+            title like $2
+            or description like $3
+            or url like $4
+            or exists (
+                select 1 from bookmark_tags bt
+                join tags t on bt.tag_id = t.tag_id
+                where
+                    bt.bookmark_id = bwt.bookmark_id
+                    and t.name like $5
+            )
         )
-        group by b.bookmark_id, b.url, b.title, b.created_at
-        order by b.created_at desc
-        limit ? offset ?
+        order by created_at desc
+        limit $6 offset $7
         "#,
         user_id,
         search_pattern,
@@ -310,31 +313,28 @@ async fn search_single_phrase(pool: &SqlitePool, user_id: Uuid, phrase: &str, li
     let res = sqlx::query_as!(
         BookmarkRecord,
         r#"
-        select distinct
-            b.url,
-            b.title,
-            b.created_at,
-            GROUP_CONCAT(distinct t2.name) as "tags_string: String"
-        from bookmarks b
-        left join bookmark_tags bt_search on b.bookmark_id = bt_search.bookmark_id
-        left join tags t_search on bt_search.tag_id = t_search.tag_id
-        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id
-        left join tags t2 on bt.tag_id = t2.tag_id
+        select
+            url,
+            title,
+            created_at,
+            tags_string
+        from bookmark_with_tags bwt
         where
-            b.user_id = ?
-            and b.is_archived = 0
+            user_id = ?
+            and is_archived = 0
             and (
-                instr(b.title, ?) > 0 or
-                instr(b.description, ?) > 0 or
-                instr(b.url, ?) > 0 or
-                instr(t_search.name, ?) > 0
+                instr(title, ?) > 0
+                or instr(description, ?) > 0
+                or instr(url, ?) > 0
+                or exists (
+                    select 1 from bookmark_tags bt
+                    join tags t on bt.tag_id = t.tag_id
+                    where
+                        bt.bookmark_id = bwt.bookmark_id
+                        and instr(t.name, ?) > 0
+                )
             )
-        group by
-            b.bookmark_id,
-            b.url,
-            b.title,
-            b.created_at
-        order by b.created_at desc
+        order by created_at desc
         limit ? offset ?
         "#,
         user_id,

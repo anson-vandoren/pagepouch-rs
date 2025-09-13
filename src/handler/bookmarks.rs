@@ -5,7 +5,6 @@ use axum::{Extension, Form, Json, extract::State, http::StatusCode, response::In
 use axum_extra::extract::Query;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use sqlx::decode;
 use tl::VDom;
 use tracing::{debug, error, warn};
 

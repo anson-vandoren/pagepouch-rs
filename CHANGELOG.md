@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Possibly fixed an issue with being rate limited after the server wakes from sleep (probably only a dev issue).
+- Made the login card centered instead of slightly offset.
 
 ### Changed
 

@@ -257,6 +257,11 @@ body > .site-footer {
 	margin-top: 0;
 }
 
+/* When showing just the login page, keep the card centered */
+body.login-layout {
+	grid-template-columns: 2fr min(45rem, 90%) 2fr;
+}
+
 /* A few overrides to simple.css */
 input,
 textarea,

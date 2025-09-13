@@ -12,7 +12,7 @@
     <script src="/assets/js/htmx-ext-response-targets.js"></script>
     <script src="/assets/js/tag-completion.js"></script>
   </head>
-  <body hx-ext="response-targets">
+  <body hx-ext="response-targets"{% if auth_state == AuthState::LoginPage %} class="login-layout"{% endif %}>
     <header>
       {% if !is_error %}{% include "partials/navbar.html" %}{% endif %}
     </header>

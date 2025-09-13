@@ -56,11 +56,11 @@ get_cargo_version() {
 version_greater() {
     local v1="$1"
     local v2="$2"
-    
+
     # Split versions into arrays
     IFS='.' read -ra V1 <<< "$v1"
     IFS='.' read -ra V2 <<< "$v2"
-    
+
     # Compare major, minor, patch
     for i in {0..2}; do
         local n1=${V1[i]:-0}
@@ -86,7 +86,7 @@ check_unreleased_changes() {
     # Get content between ## [Unreleased] and the next ## section
     local unreleased_content
     unreleased_content=$(awk '/^## \[Unreleased\]/ {found=1; next} found && /^## / {exit} found {print}' CHANGELOG.md)
-    
+
     # Check if there's at least one ### heading
     if ! echo "$unreleased_content" | grep -q "^### "; then
         echo -e "${RED}❌ CHANGELOG.md has no changes under ## [Unreleased]${NC}"
@@ -107,11 +107,11 @@ update_changelog() {
     local new_version="$1"
     local current_date
     current_date=$(date '+%Y-%m-%d')
-    
+
     # Get the previous version for comparison link
     local prev_version
     prev_version=$(get_changelog_version)
-    
+
     # Determine the comparison link
     local comparison_link
     if [[ -n "$prev_version" ]]; then
@@ -119,18 +119,18 @@ update_changelog() {
     else
         comparison_link="https://github.com/anson-vandoren/pagepouch-rs.git"
     fi
-    
+
     # Create temporary file with the new content
     local temp_file
     temp_file=$(mktemp)
-    
+
     # Add everything up to and including the [Unreleased] line, then add blank line
     awk '/^## \[Unreleased\]/ {print; print ""; exit} {print}' CHANGELOG.md > "$temp_file"
-    
+
     # Add the new release section with proper spacing
     echo "## [${new_version}](${comparison_link}) - ${current_date}" >> "$temp_file"
     echo "" >> "$temp_file"
-    
+
     # Process the unreleased content with proper formatting
     # This awk script formats the content with proper spacing around ### sections
     awk '
@@ -148,13 +148,13 @@ update_changelog() {
             print $0                  # Print other non-empty lines
         }
     }' CHANGELOG.md >> "$temp_file"
-    
+
     # Add a blank line before the next section
     echo "" >> "$temp_file"
-    
+
     # Add the rest of the file starting from the next ## section
     awk '/^## \[Unreleased\]/ {found=1; next} found && /^## / {print_rest=1} print_rest {print}' CHANGELOG.md >> "$temp_file"
-    
+
     # Replace the original file
     mv "$temp_file" CHANGELOG.md
 }
@@ -194,65 +194,65 @@ validate_changelog_content() {
 # Handle --make-release workflow
 if [[ "$MAKE_RELEASE" == "true" ]]; then
     echo -e "${BLUE}🚀 Interactive release creation${NC}"
-    
+
     # Check if we're in a clean git state
     if [[ -n $(git status --porcelain) ]]; then
         echo -e "${RED}❌ Working directory is not clean. Commit your changes first.${NC}"
         exit 1
     fi
-    
+
     # Validate CHANGELOG.md has unreleased changes
     if ! check_unreleased_changes; then
         exit 1
     fi
-    
+
     # Get current versions
     current_cargo_version=$(get_cargo_version)
     current_changelog_version=$(get_changelog_version)
-    
+
     echo -e "${YELLOW}📋 Current version information:${NC}"
     echo -e "  Cargo.toml: $current_cargo_version"
     echo -e "  Latest CHANGELOG.md: $current_changelog_version"
-    
+
     # Determine the default next version (increment patch)
     default_version=$(increment_patch "$current_cargo_version")
-    
+
     # Prompt for new version
     echo ""
     echo -e "${YELLOW}🔢 Enter new version number (default: $default_version):${NC}"
     read -r new_version
-    
+
     # Use default if empty
     if [[ -z "$new_version" ]]; then
         new_version="$default_version"
     fi
-    
+
     # Validate version format
     if [[ ! "$new_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         echo -e "${RED}❌ Version must be in format X.Y.Z${NC}"
         exit 1
     fi
-    
+
     # Check that new version is greater than current versions
     if ! version_greater "$new_version" "$current_cargo_version"; then
         echo -e "${RED}❌ New version $new_version must be greater than current Cargo.toml version $current_cargo_version${NC}"
         exit 1
     fi
-    
+
     if [[ -n "$current_changelog_version" ]] && ! version_greater "$new_version" "$current_changelog_version"; then
         echo -e "${RED}❌ New version $new_version must be greater than current CHANGELOG.md version $current_changelog_version${NC}"
         exit 1
     fi
-    
+
     echo -e "${GREEN}✅ Version $new_version is valid${NC}"
-    
+
     # Update files
     echo -e "${YELLOW}📝 Updating Cargo.toml...${NC}"
     update_cargo_version "$new_version"
-    
+
     echo -e "${YELLOW}📝 Updating CHANGELOG.md...${NC}"
     update_changelog "$new_version"
-    
+
     # Show what will be released
     echo ""
     echo -e "${BLUE}📋 Changes for version $new_version:${NC}"
@@ -260,7 +260,7 @@ if [[ "$MAKE_RELEASE" == "true" ]]; then
     get_release_notes "$new_version"
     echo -e "${BLUE}======================================================================================================${NC}"
     echo ""
-    
+
     # Confirm changes
     echo -e "${YELLOW}❓ Proceed with these changes? (y/N)${NC}"
     read -r response
@@ -268,15 +268,15 @@ if [[ "$MAKE_RELEASE" == "true" ]]; then
         echo -e "${RED}❌ Aborted${NC}"
         exit 1
     fi
-    
+
     # Stage files
     echo -e "${YELLOW}📦 Staging files for commit...${NC}"
     git add CHANGELOG.md Cargo.toml Cargo.lock
-    
+
     # Show what will be committed
     echo -e "${YELLOW}📋 Files to be committed:${NC}"
     git status --porcelain
-    
+
     # Confirm commit
     commit_message="🏗️ deploy $new_version"
     echo -e "${YELLOW}❓ Create commit with message '$commit_message'? (y/N)${NC}"
@@ -285,11 +285,11 @@ if [[ "$MAKE_RELEASE" == "true" ]]; then
         echo -e "${RED}❌ Aborted${NC}"
         exit 1
     fi
-    
+
     # Create commit
     git commit -m "$commit_message"
     echo -e "${GREEN}✅ Commit created${NC}"
-    
+
     # Confirm push
     current_branch=$(git branch --show-current)
     echo -e "${YELLOW}❓ Push changes to remote '$current_branch'? (y/N)${NC}"
@@ -298,11 +298,11 @@ if [[ "$MAKE_RELEASE" == "true" ]]; then
         echo -e "${RED}❌ Changes committed locally but not pushed. Run 'git push origin $current_branch' manually.${NC}"
         exit 1
     fi
-    
+
     # Push changes
     git push origin "$current_branch"
     echo -e "${GREEN}✅ Changes pushed to remote${NC}"
-    
+
     echo -e "${GREEN}🎉 Release version $new_version prepared successfully!${NC}"
     echo -e "${YELLOW}⏳ Proceeding with release process...${NC}"
     echo ""
@@ -446,8 +446,8 @@ echo -e "${GREEN}📡 Webhook will deploy to production automatically${NC}"
 echo -e "${GREEN}🌐 Monitor deployment at: https://pagepouch.com${NC}"
 
 # Optional: wait a bit and check deployment
-echo -e "${YELLOW}⏳ Waiting 30 seconds before checking deployment...${NC}"
-sleep 30
+echo -e "${YELLOW}⏳ Waiting 10 seconds before checking deployment...${NC}"
+sleep 10
 
 echo -e "${YELLOW}🔍 Checking if deployment was successful...${NC}"
 if curl -sf https://pagepouch.com/health >/dev/null 2>&1; then

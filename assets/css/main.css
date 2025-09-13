@@ -1143,6 +1143,15 @@ search button:active {
 	border-color: var(--bg3);
 }
 
+/* Ensure button and link alignment */
+.form-actions button[type='submit'],
+.form-actions a[role='button'] {
+	display: inline-block;
+	vertical-align: middle;
+	line-height: 1.2;
+	margin: 0;
+}
+
 /* Tag suggestions styling */
 .tag-suggestions {
 	position: absolute;

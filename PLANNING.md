@@ -51,7 +51,8 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 ## TODO
 
 - Pagination
-- tab'ing from an added tag should show it as a box
+- tab'ing from an added tag should show it as a box (on create page). Enter should work, too, and probably space.
+  - Ensure that quoted tags remove the quotes for display
 - Option per-user to share public links at $URL/my_links/${username}\_${nanoid}
 - View-only users
 - Numbers on tags showing how many links.
@@ -72,7 +73,7 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Highlighting active tags in light mode needs a different color
 - Vertical align top of tags on the right with top of top bookmark
 - ~~No tags still renders a little turd~~
-- **Save & cancel on add link are different heights**
+- ~~Save & cancel on add link are different heights~~
 - Check settings on old app to move over
 - ~~Use local time not UTC~~
 - Add & edit links as modals not different page nor inline

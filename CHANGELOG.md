@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Bookmark creation date now shows as "XX days/hours/minutes ago" instead of a UTC date.
+
 ### Fixed
 
-- Removed little empty box that rendered when a bookmark had no tags
+- Removed little empty box that rendered when a bookmark had no tags.
+- Visually aligned the save and cancel buttons on the Add Link page.
 
 ## [0.1.3](https://github.com/anson-vandoren/pagepouch-rs/compare/v0.1.2...v0.1.3) - 2025-09-12
 

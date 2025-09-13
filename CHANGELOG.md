@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added HTML-entity de-escaping to the Description field when adding a new bookmark.
+
 ### Fixed
 
 - Possibly fixed an issue with being rate limited after the server wakes from sleep (probably only a dev issue).

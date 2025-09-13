@@ -61,38 +61,36 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Row breaks between letters of tags
 - Tag column toggle to also filter by current tag filter. Filter tags are highlighted in tag column.
 - Limit the number of suggestions returned to ~10 or so, ranked.
-- Login card not centered L/R?
+- **Login card not centered L/R?**
 - On larger screen, keep the bookmarks column to a reasonable width and don't let tags column get too wide
 - User settings table (theme for now).
   - Theme should be settable persistently but should be overrideable per device/browser. (localstorage?)
-- Theme setting probably should use JSON instead of form?
-- Minify CSS and JS for prod
+- **Theme setting probably should use JSON instead of form?**
 - Are HTMX/Askama still even the right choice here? This is much more of an app than a static page...
 - 3+ query OR terms fail. Probably needs a fix like search_multiple_terms_and
-- Padding on tags under links needs to go smaller
-- Highlighting active tags in light mode needs a different color
 - Vertical align top of tags on the right with top of top bookmark
 - Check settings on old app to move over
 - Add & edit links as modals not different page nor inline
 - Sort by link count toggle + then show the count on the tag
-- Plan for key recovery: is it just a user reset? We should make this easy to do.
-- Configurable port
-- Consider letting NGINX handle static files instead
 - Tags on new link show up like others
-- Delete admin user from prod
 - Test that autologout works still
-- ~~title_input.html seems like it's only there because of HTMX and we should just use JS w/ a JSON repsonse?~~
 - Consolidate CSS and remove the simple.css stuff we don't need
-- Convert release tool to... Rust? smth, anyway. BuildGitHubReleaseRS, aka bghrrs
-- Longer cookie/session timeout
+- **Longer cookie/session timeout**
 - Delete button w/ confirm
-- HTML-de-escaping for scraped description
+- ~~HTML-de-escaping for scraped description~~
 - Show error tooltip when an error appears.
 - Investigate why an error for a non-tag.
 - Keep error underline permanently.
 
+- Configurable port
+- Delete admin user from prod
+- Plan for key recovery: is it just a user reset? We should make this easy to do.
+
+- Consider letting NGINX handle static files instead
+- Convert release tool to... Rust? smth, anyway. BuildGitHubReleaseRS, aka bghrrs
 - bookmarks.rs has a _lot_ of duplicated code
 - Check for and remove unused CSS
+- Minify CSS and JS for prod
 - Bundle(?) & minify JS
 - TESTS!!!
 - Overall project structure
@@ -105,3 +103,4 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Subdomains for users? (wildcard cert)
 - Product update emails
 - Robots.txt
+- Consider `specta` (v2) for sharing BE/FE types

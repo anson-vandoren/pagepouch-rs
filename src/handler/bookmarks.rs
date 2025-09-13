@@ -5,6 +5,7 @@ use axum::{Extension, Form, Json, extract::State, http::StatusCode, response::In
 use axum_extra::extract::Query;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use sqlx::decode;
 use tl::VDom;
 use tracing::{debug, error, warn};
 
@@ -286,18 +287,19 @@ fn get_meta_description(dom: &VDom<'_>) -> Option<String> {
         .and_then(|node| node.get(parser))
         .and_then(|node| node.as_tag())
         .and_then(|tag| tag.attributes().get("content")?)
-        .map(|content| content.as_utf8_str())
-    {
-        return Some(og_desc.to_string());
-    }
-
-    // Fall back to standard meta description
-    dom.query_selector("meta[name=\"description\"]")
-        .and_then(|mut iter| iter.next())
-        .and_then(|node| node.get(parser))
-        .and_then(|node| node.as_tag())
-        .and_then(|tag| tag.attributes().get("content")?)
         .map(|content| content.as_utf8_str().to_string())
+    {
+        Some(og_desc)
+    } else {
+        // Fall back to standard meta description
+        dom.query_selector("meta[name=\"description\"]")
+            .and_then(|mut iter| iter.next())
+            .and_then(|node| node.get(parser))
+            .and_then(|node| node.as_tag())
+            .and_then(|tag| tag.attributes().get("content")?)
+            .map(|content| content.as_utf8_str().to_string())
+    }
+    .map(|text| decode_html_entities(&text))
 }
 
 /// Decodes common HTML entities in text.

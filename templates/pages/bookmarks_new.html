@@ -14,10 +14,6 @@
             name="url"
             required
             placeholder="https://example.com/article"
-            hx-trigger="blur"
-            hx-post="/api/fetch-title"
-            hx-target="#title"
-            hx-swap="outerHTML"
             autofocus
           />
         </div>
@@ -80,6 +76,50 @@
             new Event("submit", { bubbles: true, cancelable: true }),
           );
         }
+      }
+    });
+
+    // Auto-fetch title and description when URL field loses focus
+    document.getElementById("url").addEventListener("blur", async function (e) {
+      const url = e.target.value.trim();
+
+      // Don't make request for empty or very short URLs
+      if (url.length < 3) {
+        return;
+      }
+
+      const titleField = document.getElementById("title");
+      const descriptionField = document.getElementById("description");
+
+      try {
+        const response = await fetch("/api/fetch-title", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({ url: url }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // Update title field if we got a scraped title
+          if (data.title) {
+            titleField.value = data.title;
+          }
+
+          // Update description field if we got one
+          if (data.description) {
+            descriptionField.value = data.description;
+          }
+
+          // Update URL field if it was corrected (e.g., protocol added)
+          if (data.corrected_url && data.corrected_url !== url) {
+            e.target.value = data.corrected_url;
+          }
+        }
+      } catch (error) {
+        // ignore
       }
     });
   </script>

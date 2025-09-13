@@ -1,12 +1,12 @@
 //! Bookmark-related handlers and templates.
 
 use askama::Template;
-use axum::{Extension, Form, extract::State, http::StatusCode, response::IntoResponse};
+use axum::{Extension, Form, Json, extract::State, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::Query;
 use reqwest::Client;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tl::VDom;
-use tracing::{Level, debug, error, instrument, warn};
+use tracing::{debug, error, warn};
 
 use crate::{
     ApiState,
@@ -127,11 +127,10 @@ pub struct FetchTitleRequest {
     pub url: String,
 }
 
-#[derive(Template)]
-#[template(path = "components/title_input.html")]
-pub struct TitleInputTemplate {
+#[derive(Serialize)]
+pub struct FetchTitleResponse {
+    pub title: Option<String>,
     pub description: Option<String>,
-    pub title: String,
     pub corrected_url: String,
 }
 
@@ -188,6 +187,14 @@ pub async fn bookmark_create_handler(
 
 /// Handler for fetching page title & description from URL
 pub async fn scrape_site_handler(State(state): ApiState, Form(request): Form<FetchTitleRequest>) -> impl IntoResponse {
+    if request.url.len() < 3 {
+        return Json(FetchTitleResponse {
+            title: None,
+            description: None,
+            corrected_url: request.url,
+        });
+    }
+
     match scrape_title_description(&state.http_client, &request.url).await {
         Ok(result) => {
             let LinkScrapeResult {
@@ -196,17 +203,17 @@ pub async fn scrape_site_handler(State(state): ApiState, Form(request): Form<Fet
                 final_url,
             } = result;
             debug!(final_url, title, description, "Scraped input site.");
-            HtmlTemplate(TitleInputTemplate {
+            Json(FetchTitleResponse {
+                title: Some(title),
                 description,
-                title,
                 corrected_url: final_url,
             })
         }
         Err(err) => {
-            warn!(url = request.url, ?err, "🌐 Failed to fetch title");
-            // Return the URL as fallback title
-            HtmlTemplate(TitleInputTemplate {
-                title: request.url.clone(),
+            warn!(url = request.url, %err, "🌐 Failed to fetch title");
+            // Return whatever we can - at minimum the corrected URL
+            Json(FetchTitleResponse {
+                title: None,
                 description: None,
                 corrected_url: request.url,
             })
@@ -226,10 +233,8 @@ struct LinkScrapeResult {
 /// # Errors
 ///
 /// Returns an error if the HTTP request fails or HTML parsing fails.
-#[instrument(skip(client), ret(level = Level::DEBUG))]
 async fn scrape_title_description(client: &Client, url: &str) -> anyhow::Result<LinkScrapeResult> {
     let default_title = url.to_string();
-    debug!("Starting title fetch");
     let mut url = match url {
         url if url.starts_with("http://") || url.starts_with("https://") => url.to_string(),
         no_proto => format!("http://{no_proto}"),

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## General guidelines
 
-- Don't just agree with me. Make informed pushback if you disagree. I'm not always right and I value a good discussion of the merits.
+**Important**: Don't just agree with me. Make informed pushback if you disagree. I'm not always right and I value a good discussion of the merits. When in doubt, prefer to offer an alternative viewpoint and argue for a bit to help me think through all options
 
 ## Project Overview
 

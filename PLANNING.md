@@ -55,8 +55,8 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
   - Ensure that quoted tags remove the quotes for display
 - Option per-user to share public links at $URL/my_links/${username}\_${nanoid}
 - View-only users
-- **Numbers on tags showing how many links. Or tooltips?**
-- **Tags sort by alphabetical or link count (toggle)**
+- Numbers on tags showing how many links. Or tooltips?
+- Tags sort by alphabetical or link count (toggle)
 - Should typeahead and real-time searching be via websockets instead? Discuss
 - Row breaks between letters of tags
 - Tag column toggle to also filter by current tag filter. Filter tags are highlighted in tag column.
@@ -81,9 +81,9 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Tags on new link show up like others
 - Delete admin user from prod
 - Test that autologout works still
-- title_input.html seems like it's only there because of HTMX and we should just use JS w/ a JSON repsonse?
+- ~~title_input.html seems like it's only there because of HTMX and we should just use JS w/ a JSON repsonse?~~
 - Consolidate CSS and remove the simple.css stuff we don't need
-- Convert release tool to... Rust? smth, anyway
+- Convert release tool to... Rust? smth, anyway. BuildGitHubReleaseRS, aka bghrrs
 - Longer cookie/session timeout
 - Delete button w/ confirm
 - HTML-de-escaping for scraped description

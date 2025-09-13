@@ -12,10 +12,10 @@ use axum::{
 };
 use reqwest::StatusCode;
 use tokio::time;
-use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
+use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder, key_extractor::SmartIpKeyExtractor};
 use tower_http::compression::CompressionLayer;
 use tower_livereload::LiveReloadLayer;
-use tracing::debug;
+use tracing::{debug, error};
 
 use crate::{
     AppState,
@@ -59,10 +59,24 @@ pub(crate) async fn serve(app_state: Arc<AppState>) -> Result<()> {
 }
 
 fn create_router(app_state: Arc<AppState>) -> Router {
-    let login_conf = Arc::new(GovernorConfigBuilder::default().per_second(1).burst_size(3).finish().unwrap());
+    let login_conf = Arc::new(
+        GovernorConfigBuilder::default()
+            .per_second(1)
+            .burst_size(3)
+            .key_extractor(SmartIpKeyExtractor)
+            .finish()
+            .unwrap(),
+    );
     let login_limiter = login_conf.limiter().clone();
 
-    let general_conf = Arc::new(GovernorConfigBuilder::default().per_second(2).burst_size(500).finish().unwrap());
+    let general_conf = Arc::new(
+        GovernorConfigBuilder::default()
+            .per_second(5)
+            .burst_size(100)
+            .key_extractor(SmartIpKeyExtractor)
+            .finish()
+            .unwrap(),
+    );
     let general_limiter = general_conf.limiter().clone();
 
     // Start cleanup tasks for both rate limiters
@@ -80,7 +94,10 @@ fn create_router(app_state: Arc<AppState>) -> Router {
         }
     });
 
-    let login_handler = login_user_handler.layer(GovernorLayer::new(login_conf));
+    let login_handler = login_user_handler.layer(GovernorLayer::new(login_conf).error_handler(|e| {
+        error!(?e, "Login rate limited");
+        e.into()
+    }));
 
     let route = Router::new()
         .route("/", get(home_handler))
@@ -94,7 +111,10 @@ fn create_router(app_state: Arc<AppState>) -> Router {
         .route("/api/settings/theme", post(update_theme_handler))
         .route("/api/session-check", get(session_check_handler))
         .layer(from_fn_with_state(app_state.clone(), auth_user_middleware))
-        .layer(GovernorLayer::new(general_conf)) // Apply general rate limiting to all routes
+        .layer(GovernorLayer::new(general_conf).error_handler(|e| {
+            error!(?e, "Rate limited");
+            e.into()
+        })) // Apply general rate limiting to all routes
         .route("/login", get(login_page_handler).post(login_handler))
         .route("/logout", post(logout_handler))
         .fallback(handle_404);

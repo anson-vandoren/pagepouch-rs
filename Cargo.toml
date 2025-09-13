@@ -38,7 +38,7 @@ tower-http = { version = "0.6.6", features = [
   "compression-zstd",
 ] }
 tower-livereload = "0.9.6"
-tower_governor = { version = "0.8.0", features = ["tracing"] }
+tower_governor = { version = "0.8.0", features = ["tracing", "axum"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 uuid = { version = "1.18.1", features = ["serde", "v4"] }

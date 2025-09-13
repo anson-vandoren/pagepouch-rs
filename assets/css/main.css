@@ -690,6 +690,11 @@ header nav {
 	gap: 0.375rem;
 }
 
+/* Add minimum height to tag containers to maintain consistent spacing */
+.bookmark-tags {
+	min-height: 1.25rem;
+}
+
 .tag {
 	display: inline-block;
 	background-color: var(--bg2);

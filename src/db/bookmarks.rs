@@ -39,6 +39,7 @@ impl From<&str> for TagInfo {
 ///
 /// Returns an error if database query fails.
 pub async fn get_user_bookmarks(pool: &SqlitePool, user_id: Uuid, limit: i64, offset: i64) -> Result<Vec<BookmarkWithTags>> {
+    // TODO: query_as!
     let bookmarks = sqlx::query!(
         r#"
         select
@@ -67,7 +68,7 @@ pub async fn get_user_bookmarks(pool: &SqlitePool, user_id: Uuid, limit: i64, of
     let mut result = Vec::new();
     for bookmark in bookmarks {
         let tags = bookmark.tag_names.unwrap_or_default();
-        let mut tags = tags.split(',').collect::<Vec<_>>();
+        let mut tags = tags.split(',').filter(|t| !t.is_empty()).collect::<Vec<_>>();
         tags.sort_unstable();
         let tags = tags.into_iter().map(TagInfo::from).collect();
 

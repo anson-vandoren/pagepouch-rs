@@ -54,7 +54,6 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - tab'ing from an added tag should show it as a box
 - Option per-user to share public links at $URL/my_links/${username}\_${nanoid}
 - View-only users
-- Move all inline `<script>` JS to separate files?
 - Numbers on tags showing how many links.
 - Should typeahead and real-time searching be via websockets instead? Discuss
 - Tags sort by alphabetical or link count (toggle)
@@ -72,29 +71,34 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Padding on tags under links needs to go smaller
 - Highlighting active tags in light mode needs a different color
 - Vertical align top of tags on the right with top of top bookmark
-- No tags still renders a little turd
-- Save & cancel on add link are different heights
+- ~~No tags still renders a little turd~~
+- **Save & cancel on add link are different heights**
 - Check settings on old app to move over
-- Use local time not UTC
+- **Use local time not UTC**
 - Add & edit links as modals not different page nor inline
 - Sort by link count toggle + then show the count on the tag
 - Plan for key recovery: is it just a user reset? We should make this easy to do.
+- Configurable port
+- Consider letting NGINX handle static files instead
+- Tags on new link show up like others
+- Delete admin user from prod
+- Test that autologout works still
+- title_input.html seems like it's only there because of HTMX and we should just use JS w/ a JSON repsonse?
+- Consolidate CSS and remove the simple.css stuff we don't need
+- Convert release tool to... Rust? smth, anyway
+- Longer cookie/session timeout
+- Delete button w/ confirm
+
+- Check for and remove unused CSS
+- Bundle(?) & minify JS
+- TESTS!!!
+- Overall project structure
+- Lighthouse score && fixup
+- Remove tailscale from box, probably
+- Move all inline `<script>` JS to separate files?
+- Find all `<script>` tags and consolidate them
 - Logging to /var/log
 - Monitoring somewhere
 - Subdomains for users? (wildcard cert)
 - Product update emails
 - Robots.txt
-- Configurable port
-- Consider letting NGINX handle static files instead
-- Tags on new link show up like others
-- Delete admin user from prod
-- Check for and remove unused CSS
-- Bundle(?) & minify JS
-- TESTS!!!
-- Remove tailscale from box, probably
-- Find all `<script>` tags and consolidate them
-- Overall project structure
-- Test that autologout works still
-- title_input.html seems like it's only there because of HTMX and we should just use JS w/ a JSON repsonse?
-- Lighthouse score && fixup
-- Consolidate CSS and remove the simple.css stuff we don't need

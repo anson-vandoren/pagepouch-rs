@@ -55,9 +55,9 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
   - Ensure that quoted tags remove the quotes for display
 - Option per-user to share public links at $URL/my_links/${username}\_${nanoid}
 - View-only users
-- Numbers on tags showing how many links.
+- **Numbers on tags showing how many links. Or tooltips?**
+- **Tags sort by alphabetical or link count (toggle)**
 - Should typeahead and real-time searching be via websockets instead? Discuss
-- Tags sort by alphabetical or link count (toggle)
 - Row breaks between letters of tags
 - Tag column toggle to also filter by current tag filter. Filter tags are highlighted in tag column.
 - Limit the number of suggestions returned to ~10 or so, ranked.
@@ -87,6 +87,9 @@ A self-hosted, fast, multi-user Rust app for managing bookmarks with a web UI. F
 - Longer cookie/session timeout
 - Delete button w/ confirm
 - HTML-de-escaping for scraped description
+- Show error tooltip when an error appears.
+- Investigate why an error for a non-tag.
+- Keep error underline permanently.
 
 - bookmarks.rs has a _lot_ of duplicated code
 - Check for and remove unused CSS

@@ -11,7 +11,7 @@ use tracing::{Level, debug, error, instrument, warn};
 use crate::{
     ApiState,
     db::{
-        bookmarks::{self, BookmarkWithTags},
+        bookmarks::{self, BookmarkItem},
         users::User,
     },
     handler::{AuthState, HomeTemplate, HtmlTemplate},
@@ -35,7 +35,7 @@ pub struct PageLink {
 #[derive(Template)]
 #[template(path = "components/bookmark_content.html")]
 pub struct BookmarkContentTemplate {
-    pub bookmarks: Vec<BookmarkWithTags>,
+    pub bookmarks: Vec<BookmarkItem>,
     pub pagination: Option<Pagination>,
 }
 
@@ -101,7 +101,7 @@ pub async fn bookmark_content_handler(
     };
 
     HtmlTemplate(BookmarkContentTemplate {
-        bookmarks: db_bookmarks,
+        bookmarks: db_bookmarks.into(),
         pagination,
     })
 }

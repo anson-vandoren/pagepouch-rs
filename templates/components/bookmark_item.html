@@ -18,11 +18,9 @@
     </div>
   {% else %}
     <!-- Maintain the spacing when no tags are present, but keep the div actually empty. Plus fucking satisfy stupid fucking prettier -->
-    <div class="bookmark-item-tag-container"></div>
+    <div class="bookmark-item-tag-container">
+      <div class="no-tags">No tags</div>
+    </div>
   {% endif %}
-  <div class="bookmark-meta">
-    <time datetime="{{ bookmark.created_at }}">{{ bookmark.created_ago }}</time>
-    • saved by
-    <span class="username">{{ bookmark.created_by }}</span>
-  </div>
+  <div class="bookmark-meta">Saved {{ bookmark.created_ago }}</div>
 </article>

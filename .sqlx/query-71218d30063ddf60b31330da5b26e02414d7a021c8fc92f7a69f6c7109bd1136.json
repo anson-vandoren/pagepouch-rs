@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        select\n            b.url,\n            b.title,\n            b.created_at,\n            GROUP_CONCAT(distinct t2.name) as \"tags_string: String\"\n        from bookmarks b\n        left join bookmark_tags bt_search on b.bookmark_id = bt_search.bookmark_id\n        left join tags t_search on bt_search.tag_id = t_search.tag_id\n        left join bookmark_tags bt on b.bookmark_id = bt.bookmark_id\n        left join tags t2 on bt.tag_id = t2.tag_id\n        where b.user_id = ? and b.is_archived = 0\n        and (\n            b.title like ? or\n            b.description like ? or\n            b.url like ? or\n            t_search.name like ?\n        )\n        group by b.bookmark_id, b.url, b.title, b.created_at\n        order by b.created_at desc\n        limit ? offset ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "url",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "tags_string: String",
+        "ordinal": 3,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "71218d30063ddf60b31330da5b26e02414d7a021c8fc92f7a69f6c7109bd1136"
+}

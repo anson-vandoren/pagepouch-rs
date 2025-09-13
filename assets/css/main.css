@@ -692,21 +692,17 @@ header nav {
 	min-height: 1.25rem;
 }
 
+.bookmark-item-tag-container .no-tags {
+	font-size: 0.875rem;
+	color: var(--bg4);
+	font-style: italic;
+}
+
 .bookmark-meta {
 	margin: 0.5rem 0 0 0;
 	font-size: 0.875rem;
 	color: var(--fg3);
 	line-height: 1.2;
-}
-
-.bookmark-meta time {
-	color: var(--fg2);
-	font-weight: 500;
-}
-
-.bookmark-meta .username {
-	color: var(--accent);
-	font-weight: 500;
 }
 
 /* hr under the tags header */
@@ -1134,7 +1130,6 @@ search button:active {
 /* Highlighted tag styling for active filters */
 .tag.tag-highlighted {
 	border-color: var(--accent-border);
-	font-weight: 600;
 }
 
 .tag.tag-highlighted:hover {
@@ -1209,7 +1204,6 @@ search button:active {
 
 .tag-suggestion-item.selected {
 	color: var(--accent);
-	font-weight: 500;
 }
 
 /* #endregion */
